@@ -5,7 +5,7 @@
 
 # playroom - Interactive WebGaming Console
 <p align="center">
-    <a href="https://github.com/oxygencobalt/Auxio/releases/tag/v1.0.0">
+    <a href="https://github.com/DHXNXNJXY-DEV/playroom/releases/tag/v1.0.0">
         <img alt="Latest Version" src="https://img.shields.io/static/v1?label=tag&message=v1.0.0&color=64B5F6&style=flat">
     </a>
 </p>
