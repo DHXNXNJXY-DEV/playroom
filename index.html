@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171a24">
+  <meta name="description" content="A console-style home for your games and entertainment apps.">
+  <title>Playroom — Games and entertainment</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body class="auth-required">
+  <div class="app-ui" id="app-ui">
+    <header class="topbar">
+      <button class="brand" type="button" data-screen="home" aria-label="Playroom home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span class="brand-name">playroom</span>
+      </button>
+      <div class="status-area">
+        <span class="status-date" id="status-date"></span>
+        <span class="status-divider" aria-hidden="true"></span>
+        <span class="status-time" id="status-time" aria-live="off"></span>
+        <span class="status-divider status-divider-short" aria-hidden="true"></span>
+        <span class="status-symbol" title="Connected" aria-label="Wi-Fi">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2a13.3 13.3 0 0 1 17 0M6.7 12.5a8.3 8.3 0 0 1 10.6 0M10 15.8a3.2 3.2 0 0 1 4 0M12 19h.01" /></svg>
+        </span>
+        <span class="battery" id="battery-icon" aria-hidden="true"><span class="battery-level"></span></span>
+        <span class="battery-status" id="battery-status" role="status" aria-live="polite">Checking battery</span>
+        <div class="profile-wrap">
+          <button class="profile-button" id="profile-button" type="button" aria-label="Open your profile" aria-expanded="false">A</button>
+          <section class="profile-menu" id="profile-menu" aria-label="Your account" hidden>
+            <div class="profile-menu-heading">
+              <span class="profile-avatar-large" id="profile-avatar">A</span>
+              <span><strong id="profile-name">Player</strong><span id="profile-email"></span></span>
+            </div>
+            <form id="profile-form" class="profile-edit-form">
+              <label for="profile-name-input">Display name</label>
+              <div class="profile-edit-row"><input id="profile-name-input" type="text" maxlength="32" required><button type="submit" aria-label="Save display name">Save</button></div>
+              <label class="profile-avatar-upload" for="profile-avatar-upload">Change avatar<input class="sr-only" id="profile-avatar-upload" type="file" accept="image/jpeg,image/png,image/webp"></label>
+            </form>
+            <button class="profile-signout" id="signout-button" type="button">Sign out / switch account</button>
+          </section>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen home-screen active" id="screen-home" aria-labelledby="home-title">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow"><span class="eyebrow-dot"></span> PLAYER ONE</p>
+            <h1 id="home-title">Your games</h1>
+            <p class="welcome-copy">Select a game to start playing.</p>
+          </div>
+          <button class="primary-button add-game-button" type="button" data-open-add>
+            <span class="button-plus" aria-hidden="true">+</span> Add a game
+          </button>
+        </div>
+
+        <div class="library-heading">
+          <div class="library-title-wrap">
+            <h2>All games</h2>
+            <span class="game-count" id="game-count">0</span>
+          </div>
+          <button class="library-link" type="button" data-open-add>+ Add a game</button>
+        </div>
+        <div class="game-grid" id="game-grid" aria-live="polite"></div>
+        <section class="selected-game" id="selected-game" hidden aria-live="polite">
+          <div class="selected-game-copy">
+            <span class="selected-game-label">SELECTED GAME</span>
+            <strong id="selected-game-name"></strong>
+            <span id="selected-game-host"></span>
+          </div>
+          <div class="selection-hints" aria-label="Controls">
+            <span><kbd>Enter</kbd> Play</span><span><kbd>+</kbd> Add game</span>
+          </div>
+        </section>
+
+        <section class="empty-state" id="empty-state">
+          <button class="empty-game-tile" type="button" data-open-add aria-label="Add your first game">
+            <span class="empty-game-plus">+</span>
+            <span class="empty-game-title">Add a game</span>
+          </button>
+          <p class="empty-library-hint">Add a web game to get started.</p>
+        </section>
+
+        <div class="home-lower">
+          <div class="quick-note">
+            <span class="note-icon" aria-hidden="true">✦</span>
+            <div><strong>Made for your games</strong><span>No games bundled. Your library belongs to you.</span></div>
+          </div>
+          <div class="quick-note quick-note-right">
+            <span class="note-icon note-icon-lilac" aria-hidden="true">↗</span>
+            <div><strong>Web games, one home</strong><span>Some sites may block being opened inside a launcher.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen sub-screen entertainment-screen" id="screen-entertainment" aria-labelledby="entertainment-title" hidden>
+        <div class="subscreen-heading">
+          <button class="back-button" type="button" data-screen="home" aria-label="Back to home">←</button>
+          <div><p class="eyebrow">YOUR STREAMING APPS</p><h1 id="entertainment-title">Entertainment</h1></div>
+        </div>
+        <p class="entertainment-copy">Watch videos, stream shows, and listen to music.</p>
+        <div class="entertainment-grid" id="entertainment-grid" aria-label="Entertainment apps">
+          <a class="entertainment-card" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-youtube" aria-hidden="true">▶</span><span class="entertainment-name">YouTube</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.netflix.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-netflix" aria-hidden="true">N</span><span class="entertainment-name">Netflix</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.hulu.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-hulu" aria-hidden="true">hulu</span><span class="entertainment-name">Hulu</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.disneyplus.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-disney" aria-hidden="true">D+</span><span class="entertainment-name">Disney+</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.primevideo.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-prime" aria-hidden="true">prime</span><span class="entertainment-name">Prime Video</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.max.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-max" aria-hidden="true">max</span><span class="entertainment-name">Max</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.twitch.tv/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-twitch" aria-hidden="true">▰</span><span class="entertainment-name">Twitch</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://open.spotify.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-spotify" aria-hidden="true">♫</span><span class="entertainment-name">Spotify</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+          <a class="entertainment-card" href="https://www.crunchyroll.com/" target="_blank" rel="noopener noreferrer">
+            <span class="entertainment-mark mark-crunchyroll" aria-hidden="true">◉</span><span class="entertainment-name">Crunchyroll</span><span class="entertainment-open">Open app ↗</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="screen sub-screen" id="screen-settings" aria-labelledby="settings-title" hidden>
+        <div class="subscreen-heading">
+          <button class="back-button" type="button" data-screen="home" aria-label="Back to home">←</button>
+          <div><p class="eyebrow">MAKE IT YOURS</p><h1 id="settings-title">Settings</h1></div>
+        </div>
+        <div class="settings-layout">
+          <nav class="settings-nav" aria-label="Settings categories">
+            <a href="#appearance" class="settings-nav-link active">◐ <span>Appearance</span></a>
+            <a href="#playback" class="settings-nav-link">▷ <span>Playback</span></a>
+            <a href="#preferences" class="settings-nav-link">☷ <span>Preferences</span></a>
+            <a href="#storage" class="settings-nav-link">▤ <span>Library data</span></a>
+          </nav>
+          <div class="settings-content">
+            <section class="settings-group" id="appearance">
+              <div class="settings-group-heading"><h2>Appearance</h2><p>Set the mood for your play space.</p></div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Color theme</strong><span>Choose how Playroom looks.</span></div>
+                <select id="theme-setting" class="select-control" aria-label="Color theme">
+                  <option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option>
+                </select>
+              </div>
+              <div class="setting-row wallpaper-setting-row">
+                <div class="setting-copy"><strong>Custom wallpaper</strong><span>Upload an image or a muted looping video (up to 20 MB).</span></div>
+                <div class="wallpaper-control">
+                  <label class="wallpaper-upload" for="wallpaper-upload">Choose image</label>
+                  <input class="sr-only" id="wallpaper-upload" type="file" accept="image/jpeg,image/png,image/webp">
+                  <label class="wallpaper-upload" for="wallpaper-video-upload">Choose video</label>
+                  <input class="sr-only" id="wallpaper-video-upload" type="file" accept="video/mp4,video/webm">
+                  <button class="quiet-button" id="wallpaper-remove" type="button" disabled>Remove</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Interface language</strong><span>Choose the language used in Playroom.</span></div>
+                <select id="language-setting" class="select-control" aria-label="Interface language">
+                  <option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option><option value="hi">हिन्दी</option>
+                </select>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Accent color</strong><span>Pick a color for buttons and highlights.</span></div>
+                <div class="accent-options" role="group" aria-label="Accent color">
+                  <button type="button" class="accent-swatch accent-blue" data-accent="blue" aria-label="Blue accent"></button>
+                  <button type="button" class="accent-swatch accent-coral" data-accent="coral" aria-label="Coral accent"></button>
+                  <button type="button" class="accent-swatch accent-mint" data-accent="mint" aria-label="Mint accent"></button>
+                  <button type="button" class="accent-swatch accent-violet" data-accent="violet" aria-label="Violet accent"></button>
+                </div>
+              </div>
+              <div class="setting-row setting-row-slider">
+                <div class="setting-copy"><strong>Interface brightness</strong><span>Adjust the launcher, not the game window.</span></div>
+                <div class="range-control"><input id="brightness-setting" type="range" min="70" max="110" step="1" aria-label="Interface brightness"><output id="brightness-output" for="brightness-setting">100%</output></div>
+              </div>
+            </section>
+
+            <section class="settings-group" id="playback">
+              <div class="settings-group-heading"><h2>Playback</h2><p>Small touches for your time in Playroom.</p></div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Interface sounds</strong><span>Play a soft sound when you interact.</span></div>
+                <button class="toggle" type="button" role="switch" aria-checked="true" data-setting="sounds" aria-label="Interface sounds"><span></span></button>
+              </div>
+              <div class="setting-row setting-row-slider">
+                <div class="setting-copy"><strong>Sound level</strong><span>Controls Playroom interface sounds only.</span></div>
+                <div class="range-control"><input id="volume-setting" type="range" min="0" max="100" step="1" aria-label="Interface sound level"><output id="volume-output" for="volume-setting">35%</output></div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Reduce motion</strong><span>Limit animated transitions in the launcher.</span></div>
+                <button class="toggle" type="button" role="switch" aria-checked="false" data-setting="reduceMotion" aria-label="Reduce motion"><span></span></button>
+              </div>
+            </section>
+
+            <section class="settings-group" id="preferences">
+              <div class="settings-group-heading"><h2>Preferences</h2><p>Choose the details you want to see.</p></div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>24-hour clock</strong><span>Use 13:00 instead of 1:00 PM.</span></div>
+                <button class="toggle" type="button" role="switch" aria-checked="false" data-setting="clock24" aria-label="24-hour clock"><span></span></button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Show date</strong><span>Display today’s date in the top bar.</span></div>
+                <button class="toggle" type="button" role="switch" aria-checked="true" data-setting="showDate" aria-label="Show date"><span></span></button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Library card size</strong><span>Choose how large game cards appear.</span></div>
+                <select id="density-setting" class="select-control" aria-label="Library card size">
+                  <option value="comfortable">Comfortable</option><option value="compact">Compact</option>
+                </select>
+              </div>
+            </section>
+
+            <section class="settings-group storage-group" id="storage">
+              <div class="settings-group-heading"><h2>Library data</h2><p>Your games and messages are saved in this browser only.</p></div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>Clear local data</strong><span>Remove all saved games, messages, and preferences.</span></div>
+                <button class="quiet-danger" id="clear-data" type="button">Clear data</button>
+              </div>
+              <p class="settings-footnote">Games open from the URLs you provide. A website can prevent embedding; use “Open in new tab” on its game card if that happens.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen sub-screen" id="screen-messages" aria-labelledby="messages-title" hidden>
+        <div class="subscreen-heading">
+          <button class="back-button" type="button" data-screen="home" aria-label="Back to home">←</button>
+          <div><p class="eyebrow">YOUR INBOX</p><h1 id="messages-title">Messages <span class="heading-count" id="unread-count"></span></h1></div>
+        </div>
+        <div class="messages-card">
+          <div class="messages-toolbar">
+            <div><h2>Inbox</h2><p>Notes and updates for this launcher, kept on this device.</p></div>
+            <button class="quiet-button" id="mark-read" type="button">Mark all read</button>
+          </div>
+          <form class="message-compose" id="message-form">
+            <label class="sr-only" for="message-input">Write a message</label>
+            <input id="message-input" type="text" maxlength="240" placeholder="Leave a note for yourself…" autocomplete="off">
+            <button class="primary-button" type="submit">Send <span aria-hidden="true">↗</span></button>
+          </form>
+          <div class="message-list" id="message-list" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="dock" aria-label="System menu">
+      <div class="dock-system-icons">
+        <button class="dock-item" type="button" data-screen="messages" aria-label="News and messages" title="News and messages">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5h14v11H11l-4.5 3v-3H5z"/><path d="M8 9h8M8 12.5h5"/></svg></span>
+          <span class="dock-badge" id="dock-message-count" hidden></span>
+        </button>
+        <button class="dock-item" type="button" data-open-add aria-label="Add a game" title="Add a game">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 8.5h14l1 11H4zM9 8.5a3 3 0 0 1 6 0"/><path d="M12 12v4M10 14h4"/></svg></span>
+        </button>
+        <button class="dock-item active" type="button" data-screen="home" aria-current="page" aria-label="Game library" title="Game library">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="6.5" height="6.5" rx="1.5"/><rect x="13" y="4.5" width="6.5" height="6.5" rx="1.5"/><rect x="4.5" y="13" width="6.5" height="6.5" rx="1.5"/><rect x="13" y="13" width="6.5" height="6.5" rx="1.5"/></svg></span>
+        </button>
+        <button class="dock-item" type="button" data-screen="entertainment" aria-label="Entertainment" title="Entertainment">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/></svg></span>
+        </button>
+        <button class="dock-item" type="button" data-screen="settings" aria-label="System settings" title="System settings">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19 13.8 1.1.9-1.5 2.6-1.4-.5a8 8 0 0 1-1.8 1l-.3 1.5h-3l-.3-1.5a8 8 0 0 1-1.8-1l-1.4.5-1.5-2.6 1.1-.9a7 7 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.5a8 8 0 0 1 1.8-1l.3-1.5h3l.3 1.5a8 8 0 0 1 1.8 1l1.4-.5 1.5 2.6-1.1.9a7 7 0 0 1 0 2Z"/></svg></span>
+        </button>
+        <button class="dock-item dock-sleep" type="button" id="sleep-button" aria-label="Sleep" title="Sleep">
+          <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.5 6.5a8 8 0 1 0 11 0"/></svg></span>
+        </button>
+      </div>
+      <div class="dock-hints"><span><kbd>B</kbd> Back</span><span><kbd>A</kbd> Select</span></div>
+    </footer>
+  </div>
+
+  <div class="wallpaper-layer" id="wallpaper-layer" aria-hidden="true" hidden>
+    <video id="wallpaper-video" muted loop playsinline aria-hidden="true" hidden></video>
+  </div>
+
+  <section class="auth-screen" id="auth-screen" aria-label="Playroom account" hidden>
+    <div class="auth-decoration auth-decoration-one" aria-hidden="true"></div>
+    <div class="auth-decoration auth-decoration-two" aria-hidden="true"></div>
+    <div class="auth-layout">
+      <div class="auth-card-wrap">
+        <div class="auth-card" id="auth-card">
+          <div class="auth-brand auth-card-brand">
+            <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+            <span>playroom</span>
+          </div>
+          <div class="auth-card-heading">
+            <p class="auth-card-kicker" id="auth-card-kicker">PLAYER SELECT</p>
+            <h2 id="auth-card-title">Who’s playing?</h2>
+            <p id="auth-card-copy">Choose a player or make a new user.</p>
+          </div>
+          <section class="auth-profile-picker" id="auth-profile-picker" aria-label="Choose a player" hidden>
+            <p class="auth-picker-prompt">Choose a user.</p>
+            <div class="auth-profile-list" id="auth-profile-list"></div>
+            <button class="auth-add-user" type="button" data-auth-mode="signup"><span aria-hidden="true">+</span> Add user</button>
+          </section>
+          <form class="auth-form" id="signup-form" autocomplete="off" hidden>
+            <button class="auth-back-users" id="auth-back-users" type="button">← Choose a user</button>
+            <label for="signup-name">User name</label>
+            <input id="signup-name" name="name" type="text" autocomplete="nickname" minlength="2" maxlength="32" placeholder="Enter a user name" required>
+            <span class="auth-avatar-label">Choose an icon</span>
+            <div class="auth-avatar-options" role="group" aria-label="Choose a user icon">
+              <button class="auth-avatar-option selected" type="button" data-avatar-choice="🎮" aria-label="Gamepad" aria-pressed="true">🎮</button>
+              <button class="auth-avatar-option" type="button" data-avatar-choice="⭐" aria-label="Star" aria-pressed="false">⭐</button>
+              <button class="auth-avatar-option" type="button" data-avatar-choice="🐱" aria-label="Cat" aria-pressed="false">🐱</button>
+              <button class="auth-avatar-option" type="button" data-avatar-choice="🐸" aria-label="Frog" aria-pressed="false">🐸</button>
+              <button class="auth-avatar-option" type="button" data-avatar-choice="🦊" aria-label="Fox" aria-pressed="false">🦊</button>
+              <button class="auth-avatar-option" type="button" data-avatar-choice="🐼" aria-label="Panda" aria-pressed="false">🐼</button>
+              <button class="auth-avatar-option auth-avatar-upload" id="signup-avatar-upload-option" type="button" aria-label="Upload a custom avatar" aria-pressed="false">
+                <span id="signup-avatar-preview" aria-hidden="true">＋</span>
+              </button>
+            </div>
+            <input class="sr-only" id="signup-avatar-upload" type="file" accept="image/jpeg,image/png,image/webp">
+            <input id="signup-avatar" name="avatar" type="hidden" value="🎮">
+            <p class="auth-local-note">Users and game data are saved only in this browser.</p>
+            <p class="auth-error" id="signup-error" role="alert"></p>
+            <button class="auth-submit" type="submit">Create user <span aria-hidden="true">→</span></button>
+          </form>
+        </div>
+        <p class="auth-footnote">A little space for the games you love.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="legal-backdrop" id="legal-backdrop" hidden>
+    <article class="legal-card" role="dialog" aria-modal="true" aria-labelledby="legal-title">
+      <button class="legal-close" id="legal-close" type="button" aria-label="Close">×</button>
+      <p class="auth-card-kicker">PLAYROOM ACCOUNT</p>
+      <h2 id="legal-title"></h2>
+      <div class="legal-copy" id="legal-copy"></div>
+      <button class="auth-submit legal-done" id="legal-done" type="button">Got it</button>
+    </article>
+  </section>
+
+  <div class="modal-backdrop" id="add-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
+      <button class="modal-close" type="button" data-close-modal aria-label="Close">×</button>
+      <p class="eyebrow">GROW YOUR LIBRARY</p>
+      <h2 id="add-title">Add a game</h2>
+      <p class="modal-intro">Paste a web address for a game you can play in your browser.</p>
+      <form id="add-game-form">
+        <label for="game-url">Game URL <span class="required">*</span></label>
+        <input id="game-url" name="url" type="url" placeholder="https://example.com/my-game" required>
+        <label for="game-name">Game name <span class="optional">(optional)</span></label>
+        <input id="game-name" name="name" type="text" maxlength="70" placeholder="Name it something memorable">
+        <label for="game-cover">Cover image URL <span class="optional">(optional)</span></label>
+        <input id="game-cover" name="cover" type="url" placeholder="https://example.com/cover.jpg">
+        <p class="form-error" id="form-error" role="alert"></p>
+        <div class="modal-actions"><button class="quiet-button" type="button" data-close-modal>Cancel</button><button class="primary-button" type="submit">Add to library <span aria-hidden="true">↗</span></button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <section class="sleep-screen" id="sleep-screen" hidden aria-label="Sleep mode">
+    <button class="wake-button" type="button" id="wake-button">
+      <span class="wake-mark" aria-hidden="true"><span></span><span></span></span>
+      <span>Press any button to wake</span>
+    </button>
+  </section>
+
+  <section class="game-player" id="game-player" aria-label="Game player" hidden>
+    <iframe id="game-frame" title="Web game" allow="autoplay; gamepad" allowfullscreen></iframe>
+    <div class="player-hud" id="player-hud">
+      <button type="button" class="player-exit" id="player-exit"><span aria-hidden="true">←</span> Exit game</button>
+      <span class="player-title" id="player-title"></span>
+      <button type="button" class="player-external" id="player-external">Open in new tab ↗</button>
+    </div>
+    <div class="player-loading" id="player-loading"><span class="loading-spinner"></span><span>Opening your game…</span></div>
+  </section>
+
+  <section class="boot-screen" id="boot-screen" aria-labelledby="boot-title">
+    <div class="boot-ambience" aria-hidden="true">
+      <span class="boot-orbit boot-orbit-one"></span>
+      <span class="boot-orbit boot-orbit-two"></span>
+      <span class="boot-orbit boot-orbit-three"></span>
+    </div>
+    <div class="boot-content">
+      <span class="boot-mark" aria-hidden="true"><span></span><span></span></span>
+      <p class="boot-kicker">PLAYROOM CONSOLE</p>
+      <h1 id="boot-title">playroom</h1>
+    </div>
+  </section>
+  <section class="safety-screen" id="safety-screen" aria-labelledby="safety-title" aria-live="polite" tabindex="-1" hidden>
+    <div class="safety-card">
+      <span class="safety-mark" aria-hidden="true">!</span>
+      <p class="boot-kicker">PLAYROOM CONSOLE</p>
+      <h1 id="safety-title">Photosensitivity warning</h1>
+      <p>Some games and video wallpapers may contain flashing lights or patterns that can trigger seizures in people with photosensitivity, even if they have never had a seizure before.</p>
+      <p>Stop playing and consult a doctor if you experience dizziness, altered vision, eye or muscle twitching, loss of awareness, disorientation, or convulsions. Take regular breaks, and remove any wallpaper that makes you uncomfortable.</p>
+    </div>
+  </section>
+</body>
+</html>
