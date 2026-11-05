@@ -1,0 +1,3856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSteam Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Teko:wght@700&family=Segoe+UI:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS Variables & Theme Engine */
+    :root {
+      --bg-desktop: #0a0e17;
+      --bg-window: #10151f;
+      --bg-window-bar: #0d111a;
+      --bg-rail: #0b0f16;
+      --bg-sidebar: #121824;
+      --bg-card: #161e2c;
+      --bg-card-subtle: #1c2637;
+      --bg-input: #0e131d;
+      --accent: #00d2ff;
+      --accent-hover: #33dcff;
+      --accent-subtle: rgba(0, 210, 255, 0.14);
+      --accent-border: rgba(0, 210, 255, 0.38);
+      --text-main: #f1f5f9;
+      --text-muted: #8e9fb4;
+      --text-dim: #54667d;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-card: rgba(255, 255, 255, 0.1);
+      --win-radius: 8px;
+      --shadow-window: 0 25px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    body.light-theme {
+      --bg-desktop: #cfd8e3;
+      --bg-window: #f4f7fb;
+      --bg-window-bar: #e5ebf3;
+      --bg-rail: #dbe3ee;
+      --bg-sidebar: #ecf1f8;
+      --bg-card: #ffffff;
+      --bg-card-subtle: #f0f4fa;
+      --bg-input: #ffffff;
+      --text-main: #192434;
+      --text-muted: #4b5d73;
+      --text-dim: #90a1b7;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-card: rgba(0, 0, 0, 0.09);
+      --shadow-window: 0 20px 45px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.06);
+    }
+
+    body.animations-disabled *,
+    body.animations-disabled *::before,
+    body.animations-disabled *::after {
+      transition-duration: 0.001ms !important;
+      animation-duration: 0.001ms !important;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-desktop);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 210, 255, 0.08), transparent 45%),
+        radial-gradient(circle at 85% 80%, rgba(157, 78, 221, 0.06), transparent 50%);
+      color: var(--text-main);
+      font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      user-select: none;
+      position: relative;
+    }
+
+    /* ============================================================
+       -1. AUTHENTIC WINDOWS 10 BLACK BOOT SCREEN (LOGO + SPINNER)
+       ============================================================ */
+    .win10-boot-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100001;
+      background: #000000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.65s ease;
+      will-change: opacity;
+    }
+
+    .win10-boot-screen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .win10-boot-screen.hidden {
+      display: none;
+    }
+
+    .win10-boot-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.5s ease-out;
+      will-change: transform, opacity;
+    }
+
+    /* Transition animation when moving from boot to loader */
+    .win10-boot-content.boot-transition-out {
+      transform: scale(0.94);
+      opacity: 0;
+    }
+
+    /* Windows 10 Cyan Boot Logo */
+    .win10-boot-logo {
+      width: clamp(64px, 8vw, 84px);
+      height: auto;
+      display: block;
+      margin-top: -20px;
+      margin-bottom: 78px; /* Balanced medium separation distance to loader */
+      filter: drop-shadow(0 0 1px rgba(0, 164, 239, 0.4));
+      user-select: none;
+    }
+
+    /* Compact UEFI-proportioned Orbit Ring for Black Boot Screen */
+    .win-orbit-ring.boot-compact-ring {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 0;
+    }
+
+    .win-orbit-ring.boot-compact-ring .orbit-dot {
+      width: 2.8px;
+      height: 2.8px;
+      left: 12.6px;
+      transform-origin: 1.4px 14px;
+    }
+
+    /* ============================================================
+       0. AUTHENTIC WINDOWS 10 "JUST A MOMENT..." BLUE LOADER
+       ============================================================ */
+    .win10-blue-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      background: #0067b8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      transition: opacity 0.5s ease, visibility 0.5s ease, transform 0.5s cubic-bezier(0.1, 0.9, 0.2, 1);
+      will-change: opacity, transform;
+    }
+
+    .win10-blue-loader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .win10-blue-loader.hidden {
+      display: none;
+    }
+
+    .win10-blue-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: blueIntroPop 0.65s cubic-bezier(0.15, 0.85, 0.35, 1) both;
+    }
+
+    @keyframes blueIntroPop {
+      0% {
+        opacity: 0;
+        transform: scale(1.03);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Windows 10 Orbiting Dots Ring Spinner */
+    .win-orbit-ring {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      margin-bottom: 24px;
+    }
+
+    .win-orbit-ring .orbit-dot {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      top: 0;
+      left: 27.5px;
+      transform-origin: 2.5px 30px;
+      opacity: 0;
+      animation: winOrbitAnimation 3.6s cubic-bezier(0.2, 0.85, 0.32, 1.2) infinite;
+    }
+
+    .win-orbit-ring .orbit-dot:nth-child(1) { animation-delay: 0.12s; }
+    .win-orbit-ring .orbit-dot:nth-child(2) { animation-delay: 0.26s; }
+    .win-orbit-ring .orbit-dot:nth-child(3) { animation-delay: 0.40s; }
+    .win-orbit-ring .orbit-dot:nth-child(4) { animation-delay: 0.54s; }
+    .win-orbit-ring .orbit-dot:nth-child(5) { animation-delay: 0.68s; }
+    .win-orbit-ring .orbit-dot:nth-child(6) { animation-delay: 0.82s; }
+
+    @keyframes winOrbitAnimation {
+      0% {
+        transform: rotate(0deg);
+        opacity: 1;
+        animation-timing-function: cubic-bezier(0.1, 0.85, 0.25, 1);
+      }
+      38% {
+        transform: rotate(180deg);
+        opacity: 1;
+        animation-timing-function: linear;
+      }
+      68% {
+        transform: rotate(360deg);
+        opacity: 1;
+        animation-timing-function: cubic-bezier(0.65, 0.05, 0.36, 1);
+      }
+      96%, 100% {
+        transform: rotate(540deg);
+        opacity: 0;
+      }
+    }
+
+    .win10-loader-text {
+      color: #ffffff;
+      font-size: clamp(16px, 2.5vh, 20px);
+      font-weight: 300;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ============================================================
+       1. AUTHENTIC WINDOWS 10 LOGIN SCREEN
+       ============================================================ */
+    .win10-login-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0d1a2d url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1920&q=80') center center / cover no-repeat;
+      overflow: hidden;
+      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s ease;
+      will-change: opacity, transform;
+    }
+
+    /* Windows 10 Acrylic Blur Backdrop Filter */
+    .win10-login-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 25, 47, 0.35);
+      backdrop-filter: blur(28px) saturate(125%);
+      -webkit-backdrop-filter: blur(28px) saturate(125%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .win10-login-screen.fade-out {
+      opacity: 0;
+      transform: scale(1.04);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* 1366x768 Native Proportion Frame & Optical Vertical Centering */
+    .login-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 380px;
+      padding: 0 20px;
+      /* Precisely matches authentic 1366x768 Windows 10 optical center (elevated ~36px from middle) */
+      margin-top: calc(-36px * (min(100vh, 768px) / 768));
+    }
+
+    /* Circular Silhouette Avatar Container (Proportioned for 1366x768 display) */
+    .login-avatar-circle {
+      width: clamp(140px, 20.8vh, 160px);
+      height: clamp(140px, 20.8vh, 160px);
+      border-radius: 50%;
+      background: #a6a6a6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      margin-bottom: 20px;
+      user-select: none;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .login-avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .login-avatar-icon {
+      width: 86px;
+      height: 86px;
+      stroke: #ffffff;
+      stroke-width: 1.7;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Username Typography */
+    .login-username {
+      font-size: clamp(26px, 4.1vh, 32px);
+      font-weight: 300;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      margin-bottom: 18px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+    }
+
+    /* Password Input Field with Right Submit Arrow Button */
+    .login-input-row {
+      display: flex;
+      align-items: stretch;
+      width: 260px;
+      max-width: 86vw;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .login-password-input {
+      flex: 1;
+      height: 32px;
+      background: #ffffff;
+      border: 1px solid #7a7a7a;
+      border-right: none;
+      padding: 0 10px;
+      font-size: 13.5px;
+      color: #000000;
+      outline: none;
+      font-family: inherit;
+      border-radius: 0 !important;
+    }
+
+    .login-password-input::placeholder {
+      color: #767676;
+      font-style: normal;
+    }
+
+    .login-password-input:focus {
+      border-color: #0078d7;
+    }
+
+    /* Windows 10 No-Password "Sign in" Button */
+    .login-nopass-btn {
+      min-width: 130px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 400;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+      border-radius: 0 !important;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+    }
+
+    .login-nopass-btn:hover,
+    .login-nopass-btn:active {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: #ffffff;
+    }
+
+    /* Incorrect Password Notice & Shake Animation */
+    .login-error-msg {
+      color: #ff9999;
+      font-size: 13px;
+      margin-top: 10px;
+      display: none;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+    }
+
+    .login-shake {
+      animation: win10Shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes win10Shake {
+      10%, 90% { transform: translate3d(-3px, 0, 0); }
+      20%, 80% { transform: translate3d(5px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
+    .login-submit-btn {
+      width: 34px;
+      height: 32px;
+      background: #7d96a7;
+      border: 1px solid #7d96a7;
+      border-left: none;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      border-radius: 0 !important;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    .login-submit-btn:hover,
+    .login-submit-btn:active {
+      background: #0078d7;
+      border-color: #0078d7;
+    }
+
+    /* Welcome Spinner State */
+    .login-welcome-state {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+    }
+
+    .win10-dots-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: winSpin 0.9s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+    }
+
+    @keyframes winSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    .login-footer-actions {
+      position: absolute;
+      bottom: clamp(16px, 3.2vh, 24px);
+      right: clamp(18px, 2.4vw, 28px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 2;
+    }
+
+    .login-action-btn {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.85;
+      padding: 6px;
+      transition: opacity 0.15s ease, transform 0.12s ease;
+      border-radius: 0 !important;
+    }
+
+    .login-action-btn:hover {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+
+    @media (max-width: 640px) {
+      .login-avatar-circle {
+        width: 140px;
+        height: 140px;
+        margin-bottom: 18px;
+      }
+      .login-avatar-icon {
+        width: 80px;
+        height: 80px;
+      }
+      .login-username {
+        font-size: 28px;
+        margin-bottom: 18px;
+      }
+      .login-input-row {
+        width: 240px;
+      }
+      .login-footer-actions {
+        bottom: 16px;
+        right: 16px;
+        gap: 12px;
+      }
+    }
+
+    /* ============================================================
+       2. AUTHENTIC WINDOWS STEAM UPDATER DIALOG
+       ============================================================ */
+    .steam-updater-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: transparent !important;
+      pointer-events: none;
+    }
+
+    .steam-updater-overlay.active {
+      display: flex;
+    }
+
+    .steam-updater-dialog {
+      width: 388px;
+      background: #ffffff;
+      border: 1px solid #707070;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      animation: updaterDialogPop 0.16s ease-out;
+      pointer-events: auto;
+    }
+
+    @keyframes updaterDialogPop {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .updater-titlebar {
+      height: 29px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0 0 10px;
+      border-bottom: 1px solid #eaeaea;
+    }
+
+    .updater-title-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .updater-steam-icon {
+      width: 15px;
+      height: 15px;
+      fill: #171a21;
+    }
+
+    .updater-title-text {
+      font-size: 12px;
+      color: #666666;
+    }
+
+    .updater-btn-close {
+      width: 34px;
+      height: 28px;
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666666;
+      cursor: pointer;
+    }
+
+    .updater-btn-close:hover {
+      background: #e81123;
+      color: #ffffff;
+    }
+
+    .updater-content {
+      padding: 16px 20px 18px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .updater-heading {
+      font-size: 15px;
+      color: #1a1a1a;
+      font-weight: 400;
+      margin-bottom: 13px;
+    }
+
+    .updater-progress-track {
+      width: 100%;
+      height: 16px;
+      background: #e6e6e6;
+      border: 1px solid #bcbcbc;
+      overflow: hidden;
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .updater-progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(180deg, #5fe848 0%, #20b005 50%, #178d02 100%);
+      transition: width 0.04s linear;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    }
+
+    .updater-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .updater-status-text {
+      font-size: 12px;
+      color: #1a1a1a;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .updater-btn-cancel {
+      min-width: 76px;
+      height: 24px;
+      background: #e1e1e1;
+      border: 1px solid #adadad;
+      color: #000000;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .updater-btn-cancel:hover {
+      background: #e5f1fb;
+      border-color: #0078d7;
+    }
+
+    /* ============================================================
+       3. WEBSTEAM CLIENT WINDOW
+       ============================================================ */
+    .app-window {
+      position: absolute;
+      top: 40px;
+      left: calc(50% - 580px);
+      width: 1160px;
+      height: 720px;
+      min-width: 320px;
+      min-height: 380px;
+      max-width: 100vw;
+      background: var(--bg-window);
+      border-radius: var(--win-radius);
+      box-shadow: var(--shadow-window);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 20;
+      border: 1px solid var(--border-subtle);
+      transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease, border-radius 0.2s ease;
+      will-change: transform, width, height, top, left;
+      touch-action: none;
+      margin: 0;
+    }
+
+    .app-window.maximized {
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: calc(100vh - 40px) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+
+    .app-window.minimized {
+      transform: translateY(120px) scale(0.12) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .app-window.closing {
+      transform: scale(0.85) translateY(12px) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important;
+    }
+
+    .app-window.closed {
+      display: none !important;
+    }
+
+    .resize-handle {
+      position: absolute;
+      z-index: 100;
+      touch-action: none;
+    }
+    .resize-top    { top: 0; left: 6px; right: 6px; height: 10px; cursor: n-resize; }
+    .resize-bottom { bottom: 0; left: 6px; right: 6px; height: 10px; cursor: s-resize; }
+    .resize-left   { left: 0; top: 6px; bottom: 6px; width: 10px; cursor: w-resize; }
+    .resize-right  { right: 0; top: 6px; bottom: 6px; width: 10px; cursor: e-resize; }
+    .resize-top-left     { top: 0; left: 0; width: 16px; height: 16px; cursor: nw-resize; }
+    .resize-top-right    { top: 0; right: 0; width: 16px; height: 16px; cursor: ne-resize; }
+    .resize-bottom-left  { bottom: 0; left: 0; width: 16px; height: 16px; cursor: sw-resize; }
+    .resize-bottom-right { bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; }
+
+    .titlebar {
+      height: 44px;
+      background: var(--bg-window-bar);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      position: relative;
+      flex-shrink: 0;
+      padding-left: 14px;
+      touch-action: none;
+    }
+
+    .titlebar:active {
+      cursor: grabbing;
+    }
+
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+
+    .app-identity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      letter-spacing: 0.3px;
+    }
+
+    .app-identity-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
+    }
+
+    .titlebar-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      max-width: 620px;
+      margin: 0 16px;
+      pointer-events: auto;
+    }
+
+    .caption-buttons {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      margin-left: auto;
+      pointer-events: auto;
+    }
+
+    .caption-btn {
+      width: 46px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .caption-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .caption-close:hover {
+      background: #e81123 !important;
+      color: #ffffff !important;
+    }
+
+    .btn-primary-add {
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-primary-add:hover {
+      background: var(--accent);
+      color: #05141d;
+    }
+
+    .search-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 28px 6px 30px;
+      border-radius: 18px;
+      color: var(--text-main);
+      font-size: 11.5px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-subtle);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      width: 12px;
+      height: 12px;
+      fill: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-clear-btn {
+      position: absolute;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 15px;
+      display: none;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .search-clear-btn:hover {
+      color: var(--text-main);
+    }
+
+    .profile-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px 3px 3px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      pointer-events: auto;
+    }
+
+    .profile-pill:hover {
+      border-color: var(--accent-border);
+      background: var(--bg-card-subtle);
+    }
+
+    .profile-avatar-tiny {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #17212d;
+      border: 1px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .profile-name-tiny {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      max-width: 90px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .nav-rail {
+      width: 50px;
+      background: var(--bg-rail);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .rail-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .rail-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .rail-icon-btn:hover {
+      color: var(--text-main);
+      background: var(--bg-card);
+    }
+
+    .rail-icon-btn.active {
+      color: var(--accent);
+      background: var(--accent-subtle);
+    }
+
+    .rail-icon-btn.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .library-sidebar {
+      width: 230px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 12px 14px 8px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-count-badge {
+      background: var(--bg-card-subtle);
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-game-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .sidebar-game-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      border: 1px solid transparent;
+    }
+
+    .sidebar-game-item:hover {
+      background: var(--bg-card);
+    }
+
+    .sidebar-game-item.active {
+      background: var(--accent-subtle);
+      border-color: var(--accent-border);
+    }
+
+    .sidebar-game-item.active .game-item-title {
+      color: var(--accent);
+    }
+
+    .game-thumb-box {
+      width: 30px;
+      height: 40px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #17212d;
+      flex-shrink: 0;
+    }
+
+    .game-item-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .game-item-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .game-item-subtitle {
+      font-size: 10px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-empty-msg {
+      padding: 24px 14px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .main-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg-window);
+      position: relative;
+    }
+
+    .hero-banner {
+      height: 250px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      padding: 24px 30px;
+      flex-shrink: 0;
+      background-color: #0b0f16;
+    }
+
+    .hero-bg-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.65) contrast(1.05);
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(0deg, var(--bg-window) 0%, rgba(15, 19, 26, 0.45) 55%, rgba(15, 19, 26, 0.2) 100%);
+    }
+
+    .hero-title {
+      position: relative;
+      z-index: 2;
+      font-family: 'Teko', sans-serif;
+      font-size: 60px;
+      line-height: 0.9;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.8);
+    }
+
+    .game-detail-grid {
+      padding: 24px 30px 36px;
+      display: grid;
+      grid-template-columns: 180px 1fr 220px;
+      gap: 26px;
+    }
+
+    @media (max-width: 860px) {
+      .game-detail-grid {
+        grid-template-columns: 150px 1fr;
+        padding: 16px;
+        gap: 16px;
+      }
+      .stats-column {
+        display: none !important;
+      }
+      .hero-title {
+        font-size: 42px;
+      }
+      .hero-banner {
+        height: 180px;
+        padding: 16px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-window {
+        border-radius: 6px;
+      }
+      .titlebar {
+        padding-left: 8px;
+        height: 40px;
+      }
+      .app-identity span {
+        display: none;
+      }
+      .titlebar-center {
+        margin: 0 6px;
+        gap: 6px;
+      }
+      .search-wrapper {
+        min-width: 90px;
+      }
+      .search-input {
+        padding-left: 24px;
+        font-size: 10.5px;
+      }
+      .search-icon {
+        left: 6px;
+        width: 10px;
+        height: 10px;
+      }
+      .btn-primary-add {
+        padding: 4px 8px;
+        font-size: 10.5px;
+      }
+      .profile-name-tiny {
+        display: none;
+      }
+      .profile-pill {
+        padding: 2px;
+      }
+      .caption-btn {
+        width: 34px;
+        height: 40px;
+      }
+      .nav-rail {
+        width: 42px;
+        padding: 10px 0;
+      }
+      .library-sidebar {
+        width: 150px;
+      }
+      .game-thumb-box {
+        width: 24px;
+        height: 32px;
+      }
+      .sidebar-game-item {
+        padding: 5px 6px;
+        gap: 6px;
+      }
+      .game-item-title {
+        font-size: 11px;
+      }
+      .game-detail-grid {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+      .poster-column {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .game-cover-poster {
+        width: 80px;
+      }
+      .btn-launch-hero,
+      .btn-secondary-action {
+        flex: 1;
+        min-width: 100px;
+      }
+      .win10-start-menu {
+        width: min(320px, 92vw) !important;
+        max-width: 100vw !important;
+        height: auto !important;
+        max-height: calc(100vh - 48px) !important;
+        grid-template-columns: 48px 1fr !important;
+      }
+      .taskbar-tray-date {
+        display: none !important;
+      }
+      .tray-item {
+        padding: 0 5px !important;
+      }
+      .tray-desktop-peak {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .win10-start-menu {
+        width: 100vw !important;
+        left: 0 !important;
+        right: 0 !important;
+      }
+      .tray-item {
+        display: none !important;
+      }
+    }
+
+    .poster-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .game-cover-poster {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      border-radius: 7px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-subtle);
+      background: #17212d;
+    }
+
+    .game-cover-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .btn-launch-hero {
+      width: 100%;
+      background: var(--accent);
+      color: #04141d;
+      font-size: 13.5px;
+      font-weight: 800;
+      padding: 11px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.4px;
+      box-shadow: 0 4px 15px var(--accent-subtle);
+      transition: background 0.15s, transform 0.12s;
+    }
+
+    .btn-launch-hero:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary-action {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 7px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .btn-secondary-action:hover {
+      background: var(--bg-card-subtle);
+      color: var(--text-main);
+    }
+
+    .btn-danger-action:hover {
+      border-color: rgba(244, 63, 94, 0.4);
+      color: #f43f5e;
+    }
+
+    .info-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .game-primary-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .game-primary-subtitle {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    .game-description-text {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .tags-container {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .tag-badge {
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .target-url-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .target-url-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .target-url-string {
+      font-size: 11.5px;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .stats-column {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      border-left: 1px solid var(--border-subtle);
+      padding-left: 20px;
+    }
+
+    .stat-card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .stat-card-subtitle {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .launch-counter {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .launch-counter-num {
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--text-main);
+      line-height: 1;
+    }
+
+    .launch-counter-lbl {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+
+    .tab-status-card {
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .empty-library-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .empty-library-container h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .empty-library-container p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      max-width: 400px;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       4. AUTHENTIC WINDOWS 10 TASKBAR & START MENU
+       ============================================================ */
+    .win10-taskbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: #101010;
+      border-top: 1px solid #272727;
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      z-index: 10000;
+      user-select: none;
+      -webkit-user-select: none;
+      border-radius: 0 !important;
+    }
+
+    body.light-theme .win10-taskbar {
+      background: #e1e5eb;
+      border-top: 1px solid #c2c9d4;
+    }
+
+    .taskbar-left {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .win10-start-btn {
+      width: 48px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.12s ease;
+      border-radius: 0 !important;
+      outline: none;
+      padding: 0;
+      position: relative;
+    }
+
+    .win10-start-btn:hover,
+    .win10-start-btn.active {
+      background: #0078d7;
+    }
+
+    body.light-theme .win10-start-btn {
+      color: #192434;
+    }
+
+    body.light-theme .win10-start-btn:hover,
+    body.light-theme .win10-start-btn.active {
+      background: #c7d2e0;
+      color: #0078d7;
+    }
+
+    .win10-start-logo {
+      width: 17px;
+      height: 17px;
+      display: block;
+      pointer-events: none;
+    }
+
+    .taskbar-apps-list {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .taskbar-app-item {
+      height: 40px;
+      padding: 0 12px;
+      width: 48px;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      color: var(--text-main);
+      position: relative;
+      border-radius: 0 !important;
+      transition: background 0.12s ease;
+      outline: none;
+    }
+
+    .taskbar-app-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-theme .taskbar-app-item:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    .taskbar-app-item.running {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .taskbar-app-item.active {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    body.light-theme .taskbar-app-item.active {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .taskbar-app-item::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: transparent;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .taskbar-app-item.running::after {
+      background: #767676;
+    }
+
+    .taskbar-app-item.active::after {
+      background: var(--accent);
+      height: 3px;
+    }
+
+    .taskbar-app-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .win10-tray {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .tray-item {
+      padding: 0 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #c7c7c7;
+      transition: background 0.12s;
+      border-radius: 0 !important;
+    }
+
+    .tray-item:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #ffffff;
+    }
+
+    body.light-theme .tray-item {
+      color: #4b5d73;
+    }
+
+    body.light-theme .tray-item:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: #192434;
+    }
+
+    .tray-clock-area {
+      padding: 0 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      line-height: 1.25;
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tray-clock-area:hover {
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    body.light-theme .tray-clock-area:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    .taskbar-tray-time {
+      font-size: 11.5px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .taskbar-tray-date {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .tray-desktop-peak {
+      width: 5px;
+      border-left: 1px solid rgba(255, 255, 255, 0.16);
+      cursor: pointer;
+    }
+
+    .tray-desktop-peak:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* Start Menu */
+    .win10-start-menu {
+      position: fixed;
+      bottom: 40px;
+      left: 0;
+      width: clamp(260px, 30vw, 320px);
+      max-width: 100vw;
+      height: 320px;
+      max-height: calc(100vh - 50px);
+      background: rgba(18, 18, 18, 0.96);
+      backdrop-filter: blur(28px) saturate(140%);
+      -webkit-backdrop-filter: blur(28px) saturate(140%);
+      border: 1px solid #333333;
+      border-bottom: none;
+      z-index: 10001;
+      display: none;
+      grid-template-columns: 48px 1fr;
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
+      border-radius: 0 !important;
+      overflow: visible; /* Allows flyout menu to display smoothly */
+      animation: startMenuOpen 0.14s cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    body.light-theme .win10-start-menu {
+      background: rgba(245, 247, 250, 0.97);
+      border: 1px solid #bec8d6;
+      box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.18);
+    }
+
+    .win10-start-menu.active {
+      display: grid;
+    }
+
+    @keyframes startMenuOpen {
+      from { transform: translateY(14px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .start-rail-left {
+      background: rgba(12, 12, 12, 0.85);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-radius: 0 !important;
+      position: relative;
+    }
+
+    body.light-theme .start-rail-left {
+      background: #e6ebf2;
+      border-right: 1px solid #cfd8e3;
+    }
+
+    .start-rail-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      position: relative;
+    }
+
+    .start-rail-btn {
+      width: 48px;
+      height: 48px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 0 !important;
+      transition: background 0.12s, color 0.12s;
+      touch-action: manipulation;
+    }
+
+    .start-rail-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    body.light-theme .start-rail-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: #000000;
+    }
+
+    /* Windows 10 Power Options Pop-up Flyout (Disconnect Only) */
+    .win10-power-menu {
+      position: absolute;
+      bottom: 0px;
+      left: 48px;
+      background: rgba(30, 30, 30, 0.98);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+      display: none;
+      flex-direction: column;
+      min-width: 155px;
+      z-index: 10005;
+      border-radius: 0 !important;
+      animation: powerMenuFade 0.12s cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    @keyframes powerMenuFade {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    body.light-theme .win10-power-menu {
+      background: rgba(240, 243, 246, 0.98);
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .win10-power-menu.active {
+      display: flex;
+    }
+
+    .win10-power-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      border-radius: 0 !important;
+      transition: background 0.1s ease, color 0.1s ease;
+      touch-action: manipulation;
+    }
+
+    .win10-power-item:hover,
+    .win10-power-item:active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    body.light-theme .win10-power-item:hover,
+    body.light-theme .win10-power-item:active {
+      background: rgba(0, 0, 0, 0.08);
+      color: #000000;
+    }
+
+    .start-app-list {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 12px 10px;
+      gap: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.light-theme .start-app-list {
+      border-right: 1px solid #cfd8e3;
+    }
+
+    .start-list-heading {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 8px 10px 4px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .start-list-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 10px;
+      min-height: 48px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: left;
+      border-radius: 0 !important;
+      transition: background 0.12s;
+      outline: none;
+      touch-action: manipulation;
+      width: 100%;
+    }
+
+    .start-list-item:hover,
+    .start-list-item:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-theme .start-list-item:hover,
+    body.light-theme .start-list-item:active {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    .start-list-icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .start-list-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-dialog {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-top {
+      padding: 12px 18px;
+      background: var(--bg-window-bar);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-close-icon {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-form-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .input-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .modal-text-input,
+    .modal-textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 7px 10px;
+      color: var(--text-main);
+      font-size: 12px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .modal-text-input:focus,
+    .modal-textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-textarea {
+      resize: vertical;
+      min-height: 56px;
+    }
+
+    .color-swatches-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.6);
+      transform: scale(1.1);
+    }
+
+    .custom-color-picker-input {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+    }
+
+    .upload-file-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg-card-subtle);
+      border: 1px dashed var(--border-subtle);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .upload-file-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-row-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .settings-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .settings-desc {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--bg-card-subtle);
+      border: 1px solid var(--border-subtle);
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(18px);
+      background-color: #061922;
+    }
+
+    .modal-footer {
+      padding: 10px 18px;
+      background: var(--bg-window-bar);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-modal-action {
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-modal-cancel {
+      background: var(--bg-card-subtle);
+      color: var(--text-muted);
+    }
+
+    .btn-modal-save {
+      background: var(--accent);
+      color: #03151c;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- -1. AUTHENTIC WINDOWS 10 BLACK BOOT SCREEN -->
+  <div class="win10-boot-screen" id="win10BootScreen">
+    <div class="win10-boot-content" id="win10BootContent">
+      <img class="win10-boot-logo" 
+           src="https://upload.wikimedia.org/wikipedia/commons/4/48/Windows_logo_-_2012_%28dark_blue%29.svg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
+           alt="Windows 10" 
+           onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 88.3 88.3\'><polygon fill=\'%2300adef\' points=\'0,12.5 35.8,7.6 35.8,42.4 0,42.4\'/><polygon fill=\'%2300adef\' points=\'39.7,7 88.3,0 88.3,42.4 39.7,42.4\'/><polygon fill=\'%2300adef\' points=\'0,46 35.8,46 35.8,80.7 0,75.8\'/><polygon fill=\'%2300adef\' points=\'39.7,46 88.3,46 88.3,88.3 39.7,81.3\'/></svg>'">
+      
+      <!-- Compact UEFI Orbiting Dots Ring Spinner on Black -->
+      <div class="win-orbit-ring boot-compact-ring">
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 0. AUTHENTIC WINDOWS 10 "JUST A MOMENT..." BLUE LOADER -->
+  <div class="win10-blue-loader" id="win10BlueLoader">
+    <div class="win10-blue-content">
+      <div class="win-orbit-ring">
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+      </div>
+      <div class="win10-loader-text" id="win10LoaderStatusText">Just a moment...</div>
+    </div>
+  </div>
+
+  <!-- 1. AUTHENTIC WINDOWS 10 LOGIN SCREEN -->
+  <div class="win10-login-screen" id="win10LoginScreen">
+    <div class="login-container">
+      <div class="login-avatar-circle" id="loginAvatarCircle">
+        <svg class="login-avatar-icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="7.5" r="4.2"></circle>
+          <path d="M4.5 19.5c0-4.14 3.36-7.5 7.5-7.5s7.5 3.36 7.5 7.5"></path>
+        </svg>
+      </div>
+      <div class="login-username" id="loginUsernameLabel">Martin</div>
+
+      <!-- Password Input Row (Shown when password exists) -->
+      <div class="login-input-row" id="loginInputRow">
+        <input type="password" class="login-password-input" id="loginPasswordInput" placeholder="Password" autocomplete="off" autofocus>
+        <button class="login-submit-btn" id="loginSubmitBtn" onclick="submitWin10Login()" title="Sign In">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- No-Password Sign In Button (Shown when no password is set) -->
+      <button class="login-nopass-btn" id="loginNoPassBtn" onclick="submitWin10Login()">Sign in</button>
+
+      <!-- Password Error Notice -->
+      <div class="login-error-msg" id="loginErrorMsg">The password is incorrect. Try again.</div>
+
+      <div class="login-welcome-state" id="loginWelcomeState">
+        <div class="win10-dots-spinner"></div>
+        <span>Welcome</span>
+      </div>
+    </div>
+
+    <!-- Bottom Right System Cluster -->
+    <div class="login-footer-actions">
+      <button class="login-action-btn" title="Internet Access">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+      </button>
+
+      <button class="login-action-btn" title="Ease of Access">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="2"></circle>
+          <path d="M4 8h16M12 8v13M8 21l4-5 4 5"></path>
+        </svg>
+      </button>
+
+      <button class="login-action-btn" title="Disconnect / Restart Session" onclick="lockToLoginScreen()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+          <line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. AUTHENTIC WINDOWS STEAM UPDATER DIALOG -->
+  <div class="steam-updater-overlay" id="steamUpdaterDialog">
+    <div class="steam-updater-dialog">
+      <div class="updater-titlebar">
+        <div class="updater-title-left">
+          <svg class="updater-steam-icon" viewBox="0 0 24 24">
+            <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.152-3.33-2.682L.761 14.887C2.033 20.082 6.626 24 12.021 24c6.627 0 12-5.373 12-12s-5.373-12-12-12zm-3.613 16.038l-1.939-.801c.328.697 1.01 1.189 1.821 1.229.412.021.801-.082 1.129-.271-.165-.46-.543-.836-1.011-.957zm7.575-9.362c-1.25 0-2.262 1.012-2.262 2.262s1.012 2.262 2.262 2.262 2.262-1.012 2.262-2.262-1.012-2.262-2.262-2.262z"/>
+          </svg>
+          <span class="updater-title-text">Steam</span>
+        </div>
+        <button class="updater-btn-close" onclick="cancelSteamUpdate()" title="Close">&times;</button>
+      </div>
+
+      <div class="updater-content">
+        <div class="updater-heading">Updating Steam...</div>
+        <div class="updater-progress-track">
+          <div class="updater-progress-fill" id="updaterProgressFill"></div>
+        </div>
+        <div class="updater-bottom-row">
+          <span class="updater-status-text" id="updaterStatusText">Checking for updates...</span>
+          <button class="updater-btn-cancel" onclick="cancelSteamUpdate()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. WEBSTEAM CLIENT WINDOW -->
+  <div class="app-window" id="appWindow">
+    
+    <!-- 8 Resizing Handles -->
+    <div class="resize-handle resize-top" data-dir="n"></div>
+    <div class="resize-handle resize-bottom" data-dir="s"></div>
+    <div class="resize-handle resize-left" data-dir="w"></div>
+    <div class="resize-handle resize-right" data-dir="e"></div>
+    <div class="resize-handle resize-top-left" data-dir="nw"></div>
+    <div class="resize-handle resize-top-right" data-dir="ne"></div>
+    <div class="resize-handle resize-bottom-left" data-dir="sw"></div>
+    <div class="resize-handle resize-bottom-right" data-dir="se"></div>
+
+    <!-- Titlebar -->
+    <header class="titlebar" id="windowTitlebar">
+      <div class="titlebar-left">
+        <div class="app-identity">
+          <svg class="app-identity-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.152-3.33-2.682L.761 14.887C2.033 20.082 6.626 24 12.021 24c6.627 0 12-5.373 12-12s-5.373-12-12-12zm-3.613 16.038l-1.939-.801c.328.697 1.01 1.189 1.821 1.229.412.021.801-.082 1.129-.271-.165-.46-.543-.836-1.011-.957zm7.575-9.362c-1.25 0-2.262 1.012-2.262 2.262s1.012 2.262 2.262 2.262 2.262-1.012 2.262-2.262-1.012-2.262-2.262-2.262z"/>
+          </svg>
+          <span>WebSteam</span>
+        </div>
+      </div>
+
+      <div class="titlebar-center">
+        <button class="btn-primary-add" onclick="openAddGameModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Add Game
+        </button>
+
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          <input type="text" placeholder="Search games, tags..." id="searchLibraryInput" class="search-input" oninput="handleSearchInput(this.value)">
+          <button id="searchClearBtn" class="search-clear-btn" onclick="clearSearch()">&times;</button>
+        </div>
+
+        <div class="profile-pill" onclick="openSettingsModal()" title="Edit Profile & Settings">
+          <div id="navUserAvatarWrapper" class="profile-avatar-tiny"></div>
+          <span class="profile-name-tiny" id="navUserName">DHXN</span>
+        </div>
+      </div>
+
+      <div class="caption-buttons">
+        <button class="caption-btn" onclick="minimizeWindow()" title="Minimize">
+          <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor">
+            <rect width="10" height="1"/>
+          </svg>
+        </button>
+        <button class="caption-btn" id="btnMaximizeWindow" onclick="toggleMaximizeWindow()" title="Maximize">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" id="iconMaxWindow">
+            <path d="M1 1h8v8H1V1zm1 1v6h6V2H2z"/>
+          </svg>
+        </button>
+        <button class="caption-btn caption-close" onclick="closeWindow()" title="Close">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <nav class="nav-rail">
+        <div class="rail-group">
+          <button class="rail-icon-btn active" title="WebSteam Library">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.152-3.33-2.682L.761 14.887C2.033 20.082 6.626 24 12.021 24c6.627 0 12-5.373 12-12s-5.373-12-12-12zm-3.613 16.038l-1.939-.801c.328.697 1.01 1.189 1.821 1.229.412.021.801-.082 1.129-.271-.165-.46-.543-.836-1.011-.957zm7.575-9.362c-1.25 0-2.262 1.012-2.262 2.262s1.012 2.262 2.262 2.262 2.262-1.012 2.262-2.262-1.012-2.262-2.262-2.262z"/>
+            </svg>
+          </button>
+          <button class="rail-icon-btn" onclick="openAddGameModal()" title="Add Game">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="rail-group">
+          <button class="rail-icon-btn" onclick="openSettingsModal()" title="Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <aside class="library-sidebar">
+        <div class="sidebar-header">
+          <span>GAMES</span>
+          <span class="sidebar-count-badge" id="libraryCountBadge">0</span>
+        </div>
+        <div class="sidebar-game-list" id="sidebarGameList"></div>
+      </aside>
+
+      <main class="main-view" id="mainGameView"></main>
+
+      <!-- MODAL: ADD / EDIT GAME -->
+      <div class="modal-overlay" id="gameModal">
+        <div class="modal-dialog">
+          <div class="modal-top">
+            <span class="modal-header-title" id="gameModalHeading">Add New Game</span>
+            <button class="modal-close-icon" onclick="closeGameModal()">&times;</button>
+          </div>
+          <form class="modal-form-body" id="gameForm" onsubmit="handleGameFormSubmit(event)">
+            <input type="hidden" id="formGameId">
+            <div class="input-field-group">
+              <label class="field-label">Game Title *</label>
+              <input type="text" id="formGameTitle" class="modal-text-input" placeholder="e.g. Krunker.io" required>
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Launch URL * (Opens in New Tab)</label>
+              <input type="url" id="formGameUrl" class="modal-text-input" placeholder="https://..." required>
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Hero Banner URL (Landscape)</label>
+              <input type="url" id="formGameBanner" class="modal-text-input" placeholder="https://...">
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Cover / Poster URL (Vertical)</label>
+              <input type="url" id="formGameCover" class="modal-text-input" placeholder="https://...">
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Developer / Publisher</label>
+              <input type="text" id="formGamePublisher" class="modal-text-input" placeholder="e.g. Yendis Entertainment">
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Tags (comma-separated)</label>
+              <input type="text" id="formGameTags" class="modal-text-input" placeholder="FPS, Shooter, Fast-Paced">
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Description / Notes</label>
+              <textarea id="formGameDesc" class="modal-textarea" placeholder="Brief game overview..."></textarea>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-modal-action btn-modal-cancel" onclick="closeGameModal()">Cancel</button>
+              <button type="submit" class="btn-modal-action btn-modal-save">Save Game</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: SETTINGS & USER PROFILE -->
+      <div class="modal-overlay" id="settingsModal">
+        <div class="modal-dialog">
+          <div class="modal-top">
+            <span class="modal-header-title">WebSteam Settings & Profile</span>
+            <button class="modal-close-icon" onclick="closeSettingsModal()">&times;</button>
+          </div>
+          <div class="modal-form-body">
+            
+            <div class="input-field-group">
+              <label class="field-label">Username</label>
+              <input type="text" id="settingsUserName" class="modal-text-input" value="DHXN">
+            </div>
+
+            <!-- Password Configuration -->
+            <div class="input-field-group">
+              <label class="field-label">Windows Account Password</label>
+              <input type="password" id="settingsUserPassword" class="modal-text-input" placeholder="Leave empty for password-less sign in">
+              <span style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">Leaving this blank will automatically hide the password box on the login screen.</span>
+            </div>
+
+            <div class="input-field-group">
+              <label class="field-label">Change Avatar</label>
+              <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 4px;">
+                <div id="avatarPreviewThumbnail" class="profile-avatar-tiny" style="width: 44px; height: 44px; border-width: 2px; flex-shrink: 0;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <label class="upload-file-btn">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                      </svg>
+                      Upload from PC
+                      <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarFileUpload(event)">
+                    </label>
+                    <button type="button" class="upload-file-btn" style="border-style: solid;" onclick="resetAvatarToDefault()" title="Clear avatar">
+                      Reset
+                    </button>
+                  </div>
+                  <input type="url" id="settingsUserAvatar" class="modal-text-input" placeholder="Or paste image URL..." oninput="updateAvatarPreview(this.value)">
+                </div>
+              </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 4px 0;">
+
+            <div class="input-field-group">
+              <label class="field-label">Accent Theme Color</label>
+              <div class="color-swatches-row" id="accentSwatchesContainer">
+                <input type="color" id="customColorPicker" class="custom-color-picker-input" title="Custom color" onchange="setAccentColor(this.value)">
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-title">Light Mode</span>
+                <span class="settings-desc">Switch between Pure Dark and Light mode</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="themeToggleCheckbox" onchange="handleThemeToggle(this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-title">Smooth Animations</span>
+                <span class="settings-desc">Disable transitions for low-end hardware</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="animationsToggleCheckbox" checked onchange="handleAnimationsToggle(this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-modal-action btn-modal-save" onclick="saveSettings()">Save & Close</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 4. WINDOWS 10 START MENU -->
+  <div class="win10-start-menu" id="win10StartMenu">
+    
+    <!-- Left Utility Strip -->
+    <div class="start-rail-left">
+      <div class="start-rail-group">
+        <button class="start-rail-btn" title="Expand" onclick="toggleStartMenu()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="start-rail-group" style="position: relative;">
+        <!-- POWER OPTIONS FLYOUT: DISCONNECT ONLY -->
+        <div class="win10-power-menu" id="win10PowerMenu">
+          <button class="win10-power-item" onclick="triggerDisconnect()" title="Disconnect session and return to login">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+            <span>Disconnect</span>
+          </button>
+        </div>
+
+        <button class="start-rail-btn" title="User Profile" onclick="toggleStartMenu(); openSettingsModal();">
+          <div id="startRailUserAvatar" class="profile-avatar-tiny" style="width: 22px; height: 22px; border-width: 1px;"></div>
+        </button>
+        
+        <!-- Power Options Trigger Button -->
+        <button class="start-rail-btn" id="startPowerBtn" title="Power" onclick="togglePowerMenu(event)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A7.92 7.92 0 0 1 20 12c0 4.42-3.58 8-8 8s-8-3.58-8-8c0-2.38 1.04-4.52 2.7-5.99L5.28 4.59C3.26 6.39 2 9.04 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-2.96-1.26-5.61-3.28-7.41z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Center App Index -->
+    <div class="start-app-list">
+      <div class="start-list-heading">Steam</div>
+      <button class="start-list-item" onclick="toggleStartMenu(); toggleTaskbarSteamApp();">
+        <div class="start-list-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)">
+            <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.152-3.33-2.682L.761 14.887C2.033 20.082 6.626 24 12.021 24c6.627 0 12-5.373 12-12s-5.373-12-12-12zm-3.613 16.038l-1.939-.801c.328.697 1.01 1.189 1.821 1.229.412.021.801-.082 1.129-.271-.165-.46-.543-.836-1.011-.957zm7.575-9.362c-1.25 0-2.262 1.012-2.262 2.262s1.012 2.262 2.262 2.262 2.262-1.012 2.262-2.262-1.012-2.262-2.262-2.262z"/>
+          </svg>
+        </div>
+        <span class="start-list-name">Steam</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- 5. AUTHENTIC WINDOWS 10 TASKBAR -->
+  <footer class="win10-taskbar" id="win10Taskbar">
+    <div class="taskbar-left">
+      <button class="win10-start-btn" id="win10StartBtn" onclick="toggleStartMenu()" title="Start">
+        <img class="win10-start-logo" 
+             src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Windows_icon_logo.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
+             alt="Windows"
+             onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801\'/></svg>'">
+      </button>
+
+      <div class="taskbar-apps-list">
+        <button class="taskbar-app-item running active" id="taskbarSteamApp" onclick="toggleTaskbarSteamApp()" title="Steam">
+          <svg class="taskbar-app-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.005.105.005.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.152-3.33-2.682L.761 14.887C2.033 20.082 6.626 24 12.021 24c6.627 0 12-5.373 12-12s-5.373-12-12-12zm-3.613 16.038l-1.939-.801c.328.697 1.01 1.189 1.821 1.229.412.021.801-.082 1.129-.271-.165-.46-.543-.836-1.011-.957zm7.575-9.362c-1.25 0-2.262 1.012-2.262 2.262s1.012 2.262 2.262 2.262 2.262-1.012 2.262-2.262-1.012-2.262-2.262-2.262z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="win10-tray">
+      <div class="tray-item" title="Volume">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+        </svg>
+      </div>
+
+      <div class="tray-item" title="Internet Access">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+      </div>
+
+      <div class="tray-clock-area" id="win10ClockArea" onclick="toggleStartMenu()" title="Date & Time">
+        <div class="taskbar-tray-time" id="taskbarLiveTime">12:00 PM</div>
+        <div class="taskbar-tray-date" id="taskbarLiveDate">11/4/2026</div>
+      </div>
+
+      <div class="tray-desktop-peak" onclick="peekDesktop()" title="Show desktop"></div>
+    </div>
+  </footer>
+
+  <script>
+    // Storage Keys
+    const KEY_GAMES = "websteam_games_v2";
+    const KEY_SETTINGS = "websteam_settings_v2";
+
+    const DEFAULT_COVER = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&q=75";
+    const DEFAULT_BANNER = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=75";
+    const DEFAULT_AVATAR_SVG = `<svg viewBox="0 0 24 24" width="70%" height="70%" fill="currentColor" style="color:var(--text-muted);display:block;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+
+    const ACCENT_PRESETS = [
+      { name: "Cyan Neon", color: "#00d2ff" },
+      { name: "Electric Violet", color: "#9d4edd" },
+      { name: "Jade Emerald", color: "#10b981" },
+      { name: "Sunset Crimson", color: "#f43f5e" },
+      { name: "Amber Gold", color: "#f59e0b" }
+    ];
+
+    let clientSettings = {
+      userName: "DHXN",
+      userAvatar: "",
+      password: "",
+      theme: "dark",
+      accentColor: "#00d2ff",
+      animations: true
+    };
+
+    let games = [];
+    let selectedGameId = null;
+    let searchQuery = "";
+
+    const winEl = document.getElementById("appWindow");
+    let isMaximized = false;
+    let isMinimized = false;
+    let isClosed = false;
+
+    let normalRect = {
+      top: 40,
+      left: Math.max(10, Math.floor((window.innerWidth - 1160) / 2)),
+      width: 1160,
+      height: 720
+    };
+
+    /* -------------------------------------------------------------
+       WINDOWS 10 BLACK BOOT SCREEN CONTROLLER
+       ------------------------------------------------------------- */
+    function showBlackBootScreen(durationMs = 2400, callback = null) {
+      const bootScreen = document.getElementById("win10BootScreen");
+      const bootContent = document.getElementById("win10BootContent");
+      if (!bootScreen) {
+        if (typeof callback === "function") callback();
+        return;
+      }
+
+      if (bootContent) bootContent.classList.remove("boot-transition-out");
+      bootScreen.classList.remove("hidden", "fade-out");
+      bootScreen.style.display = "flex";
+      bootScreen.style.opacity = "1";
+      bootScreen.style.visibility = "visible";
+
+      const activeDuration = clientSettings.animations === false ? 300 : durationMs;
+
+      setTimeout(() => {
+        // Trigger subtle scale-down and dissolve of the logo and small spinner
+        if (bootContent && clientSettings.animations !== false) {
+          bootContent.classList.add("boot-transition-out");
+        }
+        bootScreen.classList.add("fade-out");
+
+        setTimeout(() => {
+          bootScreen.style.display = "none";
+          bootScreen.classList.add("hidden");
+          if (bootContent) bootContent.classList.remove("boot-transition-out");
+          if (typeof callback === "function") {
+            callback();
+          }
+        }, clientSettings.animations === false ? 50 : 520);
+      }, activeDuration);
+    }
+
+    /* -------------------------------------------------------------
+       WINDOWS 10 BLUE "JUST A MOMENT..." LOADER CONTROLLER
+       ------------------------------------------------------------- */
+    function showBlueMomentLoader(customText = "Just a moment...", durationMs = 1800, callback = null) {
+      const loader = document.getElementById("win10BlueLoader");
+      const textEl = document.getElementById("win10LoaderStatusText");
+
+      if (textEl) textEl.textContent = customText;
+      if (loader) {
+        loader.classList.remove("hidden", "fade-out");
+        loader.style.display = "flex";
+        loader.style.opacity = "1";
+        loader.style.visibility = "visible";
+      }
+
+      const activeDuration = clientSettings.animations === false ? 300 : durationMs;
+
+      setTimeout(() => {
+        if (loader) loader.classList.add("fade-out");
+
+        setTimeout(() => {
+          if (loader) {
+            loader.style.display = "none";
+            loader.classList.add("hidden");
+          }
+          if (typeof callback === "function") {
+            callback();
+          }
+        }, 420);
+      }, activeDuration);
+    }
+
+    function adaptInitialWindowBounds() {
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+
+      if (screenW <= 768) {
+        normalRect.width = Math.min(screenW - 16, 720);
+        normalRect.height = Math.min(screenH - 76, 680);
+        normalRect.left = Math.max(8, Math.floor((screenW - normalRect.width) / 2));
+        normalRect.top = 10;
+        
+        winEl.style.width = `${normalRect.width}px`;
+        winEl.style.height = `${normalRect.height}px`;
+        winEl.style.left = `${normalRect.left}px`;
+        winEl.style.top = `${normalRect.top}px`;
+      }
+    }
+
+    let updaterIntervalTimer = null;
+
+    /* -------------------------------------------------------------
+       Windows 10 Login & Lock Screen Handling
+       ------------------------------------------------------------- */
+    function updateLoginPromptUI() {
+      const inputRow = document.getElementById("loginInputRow");
+      const noPassBtn = document.getElementById("loginNoPassBtn");
+      const errorMsg = document.getElementById("loginErrorMsg");
+      const pwdInput = document.getElementById("loginPasswordInput");
+
+      if (errorMsg) errorMsg.style.display = "none";
+      if (inputRow) inputRow.classList.remove("login-shake");
+
+      const hasPassword = Boolean(clientSettings.password && clientSettings.password.length > 0);
+
+      if (hasPassword) {
+        if (inputRow) inputRow.style.display = "flex";
+        if (noPassBtn) noPassBtn.style.display = "none";
+        if (pwdInput) {
+          pwdInput.value = "";
+          setTimeout(() => pwdInput.focus(), 120);
+        }
+      } else {
+        if (inputRow) inputRow.style.display = "none";
+        if (noPassBtn) {
+          noPassBtn.style.display = "flex";
+          setTimeout(() => noPassBtn.focus(), 120);
+        }
+      }
+    }
+
+    function submitWin10Login() {
+      const loginScreen = document.getElementById("win10LoginScreen");
+      const inputRow = document.getElementById("loginInputRow");
+      const noPassBtn = document.getElementById("loginNoPassBtn");
+      const welcomeState = document.getElementById("loginWelcomeState");
+      const errorMsg = document.getElementById("loginErrorMsg");
+      const pwdInput = document.getElementById("loginPasswordInput");
+
+      const hasPassword = Boolean(clientSettings.password && clientSettings.password.length > 0);
+
+      // Validate password if one is configured
+      if (hasPassword) {
+        const entered = (pwdInput ? pwdInput.value : "");
+        if (entered !== clientSettings.password) {
+          if (errorMsg) errorMsg.style.display = "block";
+          if (inputRow) {
+            inputRow.classList.remove("login-shake");
+            void inputRow.offsetWidth; // Trigger reflow
+            inputRow.classList.add("login-shake");
+          }
+          if (pwdInput) {
+            pwdInput.value = "";
+            pwdInput.focus();
+          }
+          return;
+        }
+      }
+
+      // Password matches or no password needed
+      if (errorMsg) errorMsg.style.display = "none";
+      if (inputRow) inputRow.style.display = "none";
+      if (noPassBtn) noPassBtn.style.display = "none";
+      if (welcomeState) welcomeState.style.display = "flex";
+
+      const welcomeDuration = clientSettings.animations === false ? 200 : 700;
+
+      setTimeout(() => {
+        loginScreen.classList.add("fade-out");
+
+        setTimeout(() => {
+          loginScreen.style.display = "none";
+          const postLoginDelayMs = clientSettings.animations === false ? 200 : 1600;
+          setTimeout(() => {
+            executeUpdaterDialog();
+          }, postLoginDelayMs);
+        }, 450);
+      }, welcomeDuration);
+    }
+
+    function lockToLoginScreen() {
+      const loginScreen = document.getElementById("win10LoginScreen");
+      const welcomeState = document.getElementById("loginWelcomeState");
+
+      // Hide client window & updater if running
+      closeWindow();
+      const updaterModal = document.getElementById("steamUpdaterDialog");
+      if (updaterModal) updaterModal.classList.remove("active");
+      if (updaterIntervalTimer) clearInterval(updaterIntervalTimer);
+
+      if (welcomeState) welcomeState.style.display = "none";
+
+      updateLoginPromptUI();
+
+      loginScreen.classList.remove("fade-out");
+      loginScreen.style.display = "flex";
+      loginScreen.style.visibility = "visible";
+      loginScreen.style.opacity = "1";
+    }
+
+    /* -------------------------------------------------------------
+       Power Options Flyout Controls (Disconnect Only)
+       ------------------------------------------------------------- */
+    function togglePowerMenu(event) {
+      if (event) event.stopPropagation();
+      const powerMenu = document.getElementById("win10PowerMenu");
+      if (!powerMenu) return;
+      powerMenu.classList.toggle("active");
+    }
+
+    function closePowerMenu() {
+      const powerMenu = document.getElementById("win10PowerMenu");
+      if (powerMenu) powerMenu.classList.remove("active");
+    }
+
+    function triggerDisconnect() {
+      closePowerMenu();
+      toggleStartMenu();
+      
+      // Close active application window
+      closeWindow();
+      const updaterModal = document.getElementById("steamUpdaterDialog");
+      if (updaterModal) updaterModal.classList.remove("active");
+      if (updaterIntervalTimer) clearInterval(updaterIntervalTimer);
+
+      // Show authentic Windows 10 blue screen with "Disconnecting...", then transition to login
+      showBlueMomentLoader("Disconnecting...", 1600, () => {
+        lockToLoginScreen();
+      });
+    }
+
+    /* -------------------------------------------------------------
+       Steam Updater Simulation
+       ------------------------------------------------------------- */
+    function executeUpdaterDialog() {
+      const updaterModal = document.getElementById("steamUpdaterDialog");
+      const progressFill = document.getElementById("updaterProgressFill");
+      const statusText = document.getElementById("updaterStatusText");
+
+      if (updaterIntervalTimer) clearInterval(updaterIntervalTimer);
+
+      if (progressFill) progressFill.style.width = "0%";
+      if (statusText) statusText.textContent = "Connecting to Steam Network...";
+      updaterModal.classList.add("active");
+
+      const totalKB = 54748;
+      const durationMs = clientSettings.animations === false ? 400 : 2200;
+      const startTime = Date.now();
+
+      updaterIntervalTimer = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const ratio = Math.min(1, elapsed / durationMs);
+        const currentKB = Math.floor(ratio * totalKB);
+
+        if (progressFill) progressFill.style.width = `${ratio * 100}%`;
+
+        if (ratio < 0.75) {
+          if (statusText) statusText.textContent = `Downloading update (${currentKB.toLocaleString()} of ${totalKB.toLocaleString()} KB)...`;
+        } else if (ratio < 0.95) {
+          if (statusText) statusText.textContent = `Extracting package...`;
+        } else {
+          if (statusText) statusText.textContent = `Verifying installation...`;
+        }
+
+        if (ratio >= 1) {
+          clearInterval(updaterIntervalTimer);
+          updaterIntervalTimer = null;
+
+          setTimeout(() => {
+            completeStartupAndShowClient();
+          }, 180);
+        }
+      }, 30);
+    }
+
+    function cancelSteamUpdate() {
+      if (updaterIntervalTimer) clearInterval(updaterIntervalTimer);
+      completeStartupAndShowClient();
+    }
+
+    function completeStartupAndShowClient() {
+      const updaterModal = document.getElementById("steamUpdaterDialog");
+      updaterModal.classList.remove("active");
+
+      isClosed = false;
+      isMinimized = false;
+      winEl.classList.remove("closed", "closing", "minimized");
+      winEl.style.display = "flex";
+      winEl.style.opacity = "0";
+      winEl.style.pointerEvents = "auto";
+      winEl.style.transform = "scale(0.96)";
+
+      requestAnimationFrame(() => {
+        winEl.style.opacity = "1";
+        winEl.style.transform = "scale(1)";
+        updateDockIndicator();
+      });
+    }
+
+    function runStartupSequence(includeLogin = false) {
+      if (includeLogin) {
+        lockToLoginScreen();
+      } else {
+        executeUpdaterDialog();
+      }
+    }
+
+    /* -------------------------------------------------------------
+       Data Initialization
+       ------------------------------------------------------------- */
+    function initData() {
+      try {
+        const savedSettings = localStorage.getItem(KEY_SETTINGS);
+        if (savedSettings) {
+          clientSettings = Object.assign({}, clientSettings, JSON.parse(savedSettings));
+        }
+
+        const savedGames = localStorage.getItem(KEY_GAMES);
+        if (savedGames) {
+          games = JSON.parse(savedGames);
+        } else {
+          games = [];
+        }
+      } catch (e) {
+        console.error("Storage loading error:", e);
+      }
+
+      applySettings();
+      initAccentPicker();
+
+      if (games.length > 0) {
+        selectedGameId = games[0].id;
+      }
+      renderSidebar();
+      renderMainView();
+
+      initWindowInteractions();
+      initTaskbarClock();
+      initStartMenuListeners();
+    }
+
+    function saveGamesToStorage() {
+      try {
+        localStorage.setItem(KEY_GAMES, JSON.stringify(games));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function saveSettingsToStorage() {
+      try {
+        localStorage.setItem(KEY_SETTINGS, JSON.stringify(clientSettings));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    /* -------------------------------------------------------------
+       Window Controls
+       ------------------------------------------------------------- */
+    function minimizeWindow() {
+      if (isClosed || isMinimized) return;
+      isMinimized = true;
+      winEl.classList.add("minimized");
+      updateTaskbarIndicator();
+    }
+
+    function toggleMaximizeWindow() {
+      if (isClosed || isMinimized) return;
+      const maxIcon = document.getElementById("iconMaxWindow");
+      isMaximized = !isMaximized;
+
+      if (isMaximized) {
+        winEl.classList.add("maximized");
+        maxIcon.innerHTML = `<path d="M3 1h6v6H7V3H3V1zm-2 2h6v6H1V3zm1 1v4h4V4H2z"/>`;
+      } else {
+        winEl.classList.remove("maximized");
+        winEl.style.top = `${normalRect.top}px`;
+        winEl.style.left = `${normalRect.left}px`;
+        winEl.style.width = `${normalRect.width}px`;
+        winEl.style.height = `${normalRect.height}px`;
+        maxIcon.innerHTML = `<path d="M1 1h8v8H1V1zm1 1v6h6V2H2z"/>`;
+      }
+    }
+
+    function restoreWindow() {
+      isClosed = false;
+      isMinimized = false;
+      winEl.classList.remove("closed");
+      winEl.classList.remove("closing");
+      winEl.classList.remove("minimized");
+      winEl.style.display = "flex";
+      winEl.style.opacity = "1";
+      winEl.style.pointerEvents = "auto";
+      winEl.style.transform = "scale(1)";
+      updateTaskbarIndicator();
+    }
+
+    function closeWindow() {
+      if (isClosed) return;
+      isClosed = true;
+      isMinimized = false;
+      winEl.classList.add("closing");
+      updateTaskbarIndicator();
+
+      const closeDelay = clientSettings.animations === false ? 0 : 220;
+      setTimeout(() => {
+        if (isClosed) {
+          winEl.classList.add("closed");
+          winEl.classList.remove("closing");
+          winEl.classList.remove("minimized");
+          winEl.style.display = "none";
+        }
+      }, closeDelay);
+    }
+
+    /* -------------------------------------------------------------
+       Windows 10 Taskbar Steam App & Indicator
+       ------------------------------------------------------------- */
+    function toggleTaskbarSteamApp() {
+      if (isClosed) {
+        runStartupSequence(false);
+      } else if (isMinimized) {
+        restoreWindow();
+      } else {
+        minimizeWindow();
+      }
+    }
+
+    function updateTaskbarIndicator() {
+      const btn = document.getElementById("taskbarSteamApp");
+      if (!btn) return;
+      if (isClosed) {
+        btn.classList.remove("running", "active");
+      } else if (isMinimized) {
+        btn.classList.add("running");
+        btn.classList.remove("active");
+      } else {
+        btn.classList.add("running", "active");
+      }
+    }
+
+    function updateDockIndicator() {
+      updateTaskbarIndicator();
+    }
+
+    /* -------------------------------------------------------------
+       Start Menu Toggle & Click Outside Handling
+       ------------------------------------------------------------- */
+    function toggleStartMenu() {
+      const menu = document.getElementById("win10StartMenu");
+      const btn = document.getElementById("win10StartBtn");
+      const isOpen = menu.classList.contains("active");
+
+      if (isOpen) {
+        menu.classList.remove("active");
+        btn.classList.remove("active");
+        closePowerMenu();
+      } else {
+        menu.classList.add("active");
+        btn.classList.add("active");
+      }
+    }
+
+    function initStartMenuListeners() {
+      document.addEventListener("pointerdown", (e) => {
+        const menu = document.getElementById("win10StartMenu");
+        const btn = document.getElementById("win10StartBtn");
+        const powerMenu = document.getElementById("win10PowerMenu");
+        const powerBtn = document.getElementById("startPowerBtn");
+
+        if (powerMenu && !powerMenu.contains(e.target) && (!powerBtn || !powerBtn.contains(e.target))) {
+          closePowerMenu();
+        }
+
+        if (!menu.classList.contains("active")) return;
+
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.classList.remove("active");
+          btn.classList.remove("active");
+          closePowerMenu();
+        }
+      });
+    }
+
+    function peekDesktop() {
+      if (!isClosed && !isMinimized) {
+        minimizeWindow();
+      } else if (isMinimized) {
+        restoreWindow();
+      }
+    }
+
+    /* -------------------------------------------------------------
+       Taskbar Live Clock
+       ------------------------------------------------------------- */
+    function initTaskbarClock() {
+      function updateTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' });
+        
+        const timeEl = document.getElementById("taskbarLiveTime");
+        const dateEl = document.getElementById("taskbarLiveDate");
+        if (timeEl) timeEl.textContent = timeStr;
+        if (dateEl) dateEl.textContent = dateStr;
+      }
+      updateTime();
+      setInterval(updateTime, 1000);
+    }
+
+    /* -------------------------------------------------------------
+       Accent Theme Color Engine
+       ------------------------------------------------------------- */
+    function setAccentColor(hexColor) {
+      clientSettings.accentColor = hexColor;
+      applyAccentCSS(hexColor);
+      updateAccentPickerUI();
+      saveSettingsToStorage();
+    }
+
+    function applyAccentCSS(hexColor) {
+      const root = document.documentElement;
+      root.style.setProperty('--accent', hexColor);
+      root.style.setProperty('--accent-subtle', hexToRGBA(hexColor, 0.14));
+      root.style.setProperty('--accent-border', hexToRGBA(hexColor, 0.38));
+      root.style.setProperty('--accent-hover', adjustBrightness(hexColor, 20));
+    }
+
+    function hexToRGBA(hex, alpha) {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+    }
+
+    function adjustBrightness(hex, percent) {
+      let num = parseInt(hex.replace('#',''), 16),
+          amt = Math.round(2.55 * percent),
+          R = (num >> 16) + amt,
+          G = (num >> 8 & 0x00FF) + amt,
+          B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255)).toString(16).slice(1);
+    }
+
+    function initAccentPicker() {
+      const container = document.getElementById("accentSwatchesContainer");
+      const customInput = document.getElementById("customColorPicker");
+
+      ACCENT_PRESETS.forEach(preset => {
+        const dot = document.createElement("div");
+        dot.className = "color-swatch";
+        dot.style.background = preset.color;
+        dot.title = preset.name;
+        dot.onclick = () => setAccentColor(preset.color);
+        dot.dataset.color = preset.color;
+        container.insertBefore(dot, customInput);
+      });
+
+      updateAccentPickerUI();
+    }
+
+    function updateAccentPickerUI() {
+      const dots = document.querySelectorAll(".color-swatch");
+      dots.forEach(d => {
+        if (d.dataset.color && d.dataset.color.toLowerCase() === clientSettings.accentColor.toLowerCase()) {
+          d.classList.add("active");
+        } else {
+          d.classList.remove("active");
+        }
+      });
+      const customInput = document.getElementById("customColorPicker");
+      if (customInput) customInput.value = clientSettings.accentColor;
+    }
+
+    /* -------------------------------------------------------------
+       Avatar Management
+       ------------------------------------------------------------- */
+    function renderAvatarElement(containerEl, avatarUrl) {
+      if (!containerEl) return;
+      if (avatarUrl && avatarUrl.trim()) {
+        containerEl.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.onerror=null;this.parentElement.innerHTML=DEFAULT_AVATAR_SVG;">`;
+      } else {
+        containerEl.innerHTML = DEFAULT_AVATAR_SVG;
+      }
+    }
+
+    function updateAvatarPreview(src) {
+      const preview = document.getElementById("avatarPreviewThumbnail");
+      renderAvatarElement(preview, src);
+    }
+
+    function resetAvatarToDefault() {
+      clientSettings.userAvatar = "";
+      document.getElementById("settingsUserAvatar").value = "";
+      updateAvatarPreview("");
+    }
+
+    function handleAvatarFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const resultUrl = e.target.result;
+        clientSettings.userAvatar = resultUrl;
+        document.getElementById("settingsUserAvatar").value = resultUrl;
+        updateAvatarPreview(resultUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* -------------------------------------------------------------
+       Settings & Customization Engine
+       ------------------------------------------------------------- */
+    function applySettings() {
+      const displayName = clientSettings.userName || "Martin";
+      document.getElementById("navUserName").textContent = displayName;
+      
+      const loginNameLabel = document.getElementById("loginUsernameLabel");
+      if (loginNameLabel) loginNameLabel.textContent = displayName;
+
+      renderAvatarElement(document.getElementById("navUserAvatarWrapper"), clientSettings.userAvatar);
+      renderAvatarElement(document.getElementById("startRailUserAvatar"), clientSettings.userAvatar);
+
+      const loginAvatarCircle = document.getElementById("loginAvatarCircle");
+      if (loginAvatarCircle) {
+        if (clientSettings.userAvatar && clientSettings.userAvatar.trim()) {
+          loginAvatarCircle.innerHTML = `<img src="${clientSettings.userAvatar}" alt="${displayName}" onerror="this.onerror=null;this.parentElement.innerHTML='<svg class=\\\'login-avatar-icon\\\' viewBox=\\\'0 0 24 24\\\'><circle cx=\\\'12\\\' cy=\\\'7.5\\\' r=\\\'4.2\\\'></circle><path d=\\\'M4.5 19.5c0-4.14 3.36-7.5 7.5-7.5s7.5 3.36 7.5 7.5\\\'></path></svg>';">`;
+        } else {
+          loginAvatarCircle.innerHTML = `
+            <svg class="login-avatar-icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="7.5" r="4.2"></circle>
+              <path d="M4.5 19.5c0-4.14 3.36-7.5 7.5-7.5s7.5 3.36 7.5 7.5"></path>
+            </svg>
+          `;
+        }
+      }
+
+      document.getElementById("settingsUserName").value = displayName;
+      document.getElementById("settingsUserPassword").value = clientSettings.password || "";
+      document.getElementById("settingsUserAvatar").value = clientSettings.userAvatar || "";
+      updateAvatarPreview(clientSettings.userAvatar);
+      updateLoginPromptUI();
+
+      applyAccentCSS(clientSettings.accentColor || "#00d2ff");
+
+      if (clientSettings.theme === "light") {
+        document.body.classList.add("light-theme");
+        document.getElementById("themeToggleCheckbox").checked = true;
+      } else {
+        document.body.classList.remove("light-theme");
+        document.getElementById("themeToggleCheckbox").checked = false;
+      }
+
+      if (clientSettings.animations === false) {
+        document.body.classList.add("animations-disabled");
+        document.getElementById("animationsToggleCheckbox").checked = false;
+      } else {
+        document.body.classList.remove("animations-disabled");
+        document.getElementById("animationsToggleCheckbox").checked = true;
+      }
+    }
+
+    function handleThemeToggle(isLight) {
+      clientSettings.theme = isLight ? "light" : "dark";
+      applySettings();
+      saveSettingsToStorage();
+    }
+
+    function handleAnimationsToggle(isEnabled) {
+      clientSettings.animations = isEnabled;
+      applySettings();
+      saveSettingsToStorage();
+    }
+
+    function saveSettings() {
+      clientSettings.userName = document.getElementById("settingsUserName").value.trim() || "User";
+      clientSettings.password = document.getElementById("settingsUserPassword").value;
+      clientSettings.userAvatar = document.getElementById("settingsUserAvatar").value.trim();
+      applySettings();
+      saveSettingsToStorage();
+      closeSettingsModal();
+    }
+
+    function openSettingsModal() {
+      document.getElementById("settingsModal").classList.add("active");
+    }
+
+    function closeSettingsModal() {
+      document.getElementById("settingsModal").classList.remove("active");
+    }
+
+    /* -------------------------------------------------------------
+       Sidebar Rendering & Real-time Search Engine
+       ------------------------------------------------------------- */
+    function renderSidebar() {
+      const container = document.getElementById("sidebarGameList");
+      const badge = document.getElementById("libraryCountBadge");
+      
+      const filteredGames = games.filter(g => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (g.title || "").toLowerCase().includes(q) ||
+               (g.publisher || "").toLowerCase().includes(q) ||
+               (g.tags || "").toLowerCase().includes(q) ||
+               (g.description || "").toLowerCase().includes(q);
+      });
+
+      badge.textContent = filteredGames.length;
+
+      if (filteredGames.length === 0) {
+        if (searchQuery) {
+          container.innerHTML = `<div class="sidebar-empty-msg">No games found matching "<strong>${escapeHtml(searchQuery)}</strong>"</div>`;
+        } else {
+          container.innerHTML = `<div class="sidebar-empty-msg">No games in library.<br>Click <strong>+ Add Game</strong> above.</div>`;
+        }
+        return;
+      }
+
+      container.innerHTML = "";
+      filteredGames.forEach(game => {
+        const item = document.createElement("div");
+        item.className = `sidebar-game-item ${game.id === selectedGameId ? 'active' : ''}`;
+        item.onclick = () => selectGame(game.id);
+
+        const coverSrc = game.cover || DEFAULT_COVER;
+        item.innerHTML = `
+          <img class="game-thumb-box" src="${coverSrc}" alt="" onerror="this.src='${DEFAULT_COVER}'">
+          <div class="game-item-info">
+            <span class="game-item-title">${escapeHtml(game.title)}</span>
+            <span class="game-item-subtitle">${escapeHtml(game.publisher || 'Custom Entry')}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function handleSearchInput(val) {
+      searchQuery = val.trim();
+      const clearBtn = document.getElementById("searchClearBtn");
+      if (clearBtn) clearBtn.style.display = searchQuery.length > 0 ? "block" : "none";
+      renderSidebar();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById("searchLibraryInput");
+      input.value = "";
+      handleSearchInput("");
+      input.focus();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function selectGame(id) {
+      selectedGameId = id;
+      renderSidebar();
+      renderMainView();
+    }
+
+    /* -------------------------------------------------------------
+       Main Game View Rendering
+       ------------------------------------------------------------- */
+    function renderMainView() {
+      const mainContainer = document.getElementById("mainGameView");
+      const game = games.find(g => g.id === selectedGameId);
+
+      if (!game) {
+        mainContainer.innerHTML = `
+          <div class="empty-library-container">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="var(--text-dim)">
+              <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/>
+            </svg>
+            <h2>Your Library is Empty</h2>
+            <p>Add browser games, lightweight HTML5 games, or links with custom banners and boxart posters.</p>
+            <button class="btn-primary-add" style="padding: 8px 18px; font-size: 12.5px;" onclick="openAddGameModal()">+ Add Your First Game</button>
+          </div>
+        `;
+        return;
+      }
+
+      const bannerSrc = game.banner || DEFAULT_BANNER;
+      const coverSrc = game.cover || DEFAULT_COVER;
+      const tagsList = (game.tags || "Arcade, Web").split(",").map(t => t.trim()).filter(Boolean);
+
+      mainContainer.innerHTML = `
+        <section class="hero-banner">
+          <img class="hero-bg-img" src="${bannerSrc}" alt="${escapeHtml(game.title)}" onerror="this.src='${DEFAULT_BANNER}'">
+          <div class="hero-overlay"></div>
+          <h1 class="hero-title">${escapeHtml(game.title)}</h1>
+        </section>
+
+        <div class="game-detail-grid">
+          
+          <div class="poster-column">
+            <div class="game-cover-poster">
+              <img src="${coverSrc}" alt="${escapeHtml(game.title)}" onerror="this.src='${DEFAULT_COVER}'">
+            </div>
+
+            <button class="btn-launch-hero" onclick="launchGameTarget('${game.id}')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Launch Game
+            </button>
+
+            <div class="btn-secondary-action" onclick="openEditGameModal('${game.id}')">Edit Game</div>
+            <div class="btn-secondary-action btn-danger-action" onclick="deleteGameEntry('${game.id}')">Delete Game</div>
+          </div>
+
+          <div class="info-column">
+            <div>
+              <div class="game-primary-title">${escapeHtml(game.title)}</div>
+              <div class="game-primary-subtitle">${escapeHtml(game.publisher || 'Custom Developer')} &bull; Direct Launch</div>
+            </div>
+
+            <p class="game-description-text">
+              ${escapeHtml(game.description || 'No overview provided for this entry. Click "Edit Game" to write a custom description.')}
+            </p>
+
+            <div class="tags-container">
+              <span style="font-weight: 700; font-size: 11px; color: var(--text-dim);">TAGS:</span>
+              ${tagsList.map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join('')}
+            </div>
+
+            <div class="target-url-card">
+              <span class="target-url-label">Direct Launch URL (Opens in Clean Tab)</span>
+              <span class="target-url-string">${escapeHtml(game.url)}</span>
+            </div>
+          </div>
+
+          <div class="stats-column">
+            <div>
+              <div class="stat-card-title">Activity Tracking</div>
+              <div class="stat-card-subtitle">Stored via Local Profile</div>
+              <div class="launch-counter">
+                <div class="launch-counter-num">${game.launches || 0}</div>
+                <div class="launch-counter-lbl">TOTAL<br>LAUNCHES</div>
+              </div>
+            </div>
+
+            <div class="tab-status-card">
+              <strong>Direct Tab Launching:</strong><br>
+              Games run in a clean browser tab to eliminate background memory overhead on low-end hardware.
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+    function launchGameTarget(id) {
+      const game = games.find(g => g.id === id);
+      if (!game || !game.url) return;
+
+      game.launches = (game.launches || 0) + 1;
+      saveGamesToStorage();
+      renderMainView();
+
+      window.open(game.url, '_blank', 'noopener,noreferrer');
+    }
+
+    function openAddGameModal() {
+      document.getElementById("gameModalHeading").textContent = "Add New Game";
+      document.getElementById("formGameId").value = "";
+      document.getElementById("gameForm").reset();
+      document.getElementById("gameModal").classList.add("active");
+    }
+
+    function openEditGameModal(id) {
+      const game = games.find(g => g.id === id);
+      if (!game) return;
+
+      document.getElementById("gameModalHeading").textContent = "Edit Game Details";
+      document.getElementById("formGameId").value = game.id;
+      document.getElementById("formGameTitle").value = game.title || "";
+      document.getElementById("formGameUrl").value = game.url || "";
+      document.getElementById("formGameBanner").value = game.banner || "";
+      document.getElementById("formGameCover").value = game.cover || "";
+      document.getElementById("formGamePublisher").value = game.publisher || "";
+      document.getElementById("formGameTags").value = game.tags || "";
+      document.getElementById("formGameDesc").value = game.description || "";
+
+      document.getElementById("gameModal").classList.add("active");
+    }
+
+    function closeGameModal() {
+      document.getElementById("gameModal").classList.remove("active");
+    }
+
+    function handleGameFormSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById("formGameId").value;
+      const title = document.getElementById("formGameTitle").value.trim();
+      const url = document.getElementById("formGameUrl").value.trim();
+      const banner = document.getElementById("formGameBanner").value.trim();
+      const cover = document.getElementById("formGameCover").value.trim();
+      const publisher = document.getElementById("formGamePublisher").value.trim();
+      const tags = document.getElementById("formGameTags").value.trim();
+      const description = document.getElementById("formGameDesc").value.trim();
+
+      if (!title || !url) return;
+
+      if (editId) {
+        const game = games.find(g => g.id === editId);
+        if (game) {
+          game.title = title;
+          game.url = url;
+          game.banner = banner;
+          game.cover = cover;
+          game.publisher = publisher;
+          game.tags = tags;
+          game.description = description;
+        }
+      } else {
+        const newGame = {
+          id: 'ws_game_' + Date.now(),
+          title,
+          url,
+          banner,
+          cover,
+          publisher,
+          tags,
+          description,
+          launches: 0
+        };
+        games.push(newGame);
+        selectedGameId = newGame.id;
+      }
+
+      saveGamesToStorage();
+      closeGameModal();
+      renderSidebar();
+      renderMainView();
+    }
+
+    function deleteGameEntry(id) {
+      games = games.filter(g => g.id !== id);
+      if (selectedGameId === id) {
+        selectedGameId = games.length > 0 ? games[0].id : null;
+      }
+      saveGamesToStorage();
+      renderSidebar();
+      renderMainView();
+    }
+
+    /* -------------------------------------------------------------
+       Window Dragging and 8-Direction Resizing
+       ------------------------------------------------------------- */
+    function initWindowInteractions() {
+      const titlebar = document.getElementById("windowTitlebar");
+      let isDragging = false;
+      let activeDragPointerId = null;
+      let dragStartX = 0, dragStartY = 0;
+      let initialLeft = 0, initialTop = 0;
+
+      function startDrag(e) {
+        if (e.target.closest(".caption-buttons") || 
+            e.target.closest("button") || 
+            e.target.closest("input") || 
+            e.target.closest(".profile-pill") || 
+            isMaximized || isClosed || isMinimized) {
+          return;
+        }
+
+        if (e.isPrimary === false) return;
+
+        isDragging = true;
+        activeDragPointerId = e.pointerId;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+
+        const rect = winEl.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        winEl.style.transition = "none";
+        winEl.style.transform = "none";
+        winEl.style.left = `${initialLeft}px`;
+        winEl.style.top = `${initialTop}px`;
+        document.body.style.userSelect = "none";
+
+        if (titlebar.setPointerCapture) {
+          try {
+            titlebar.setPointerCapture(e.pointerId);
+          } catch (err) {}
+        }
+
+        titlebar.addEventListener("pointermove", onDragMove);
+        titlebar.addEventListener("pointerup", stopDrag);
+        titlebar.addEventListener("pointercancel", stopDrag);
+
+        e.preventDefault();
+      }
+
+      function onDragMove(e) {
+        if (!isDragging || isMaximized || e.pointerId !== activeDragPointerId) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+
+        let newLeft = initialLeft + deltaX;
+        let newTop = initialTop + deltaY;
+
+        const minVisibleLeft = -winEl.offsetWidth + 120;
+        const maxVisibleLeft = window.innerWidth - 80;
+        const maxVisibleTop = window.innerHeight - 50;
+
+        newLeft = Math.max(minVisibleLeft, Math.min(newLeft, maxVisibleLeft));
+        newTop = Math.max(0, Math.min(newTop, maxVisibleTop));
+
+        winEl.style.left = `${newLeft}px`;
+        winEl.style.top = `${newTop}px`;
+        normalRect.left = newLeft;
+        normalRect.top = newTop;
+      }
+
+      function stopDrag(e) {
+        if (!isDragging) return;
+        if (e && e.pointerId !== activeDragPointerId) return;
+
+        isDragging = false;
+
+        if (titlebar.releasePointerCapture && activeDragPointerId !== null) {
+          try {
+            titlebar.releasePointerCapture(activeDragPointerId);
+          } catch (err) {}
+        }
+        activeDragPointerId = null;
+
+        winEl.style.transition = "";
+        document.body.style.userSelect = "";
+
+        titlebar.removeEventListener("pointermove", onDragMove);
+        titlebar.removeEventListener("pointerup", stopDrag);
+        titlebar.removeEventListener("pointercancel", stopDrag);
+      }
+
+      titlebar.addEventListener("pointerdown", startDrag);
+
+      titlebar.addEventListener("dblclick", (e) => {
+        if (e.target.closest("button") || e.target.closest("input") || e.target.closest(".profile-pill")) return;
+        toggleMaximizeWindow();
+      });
+
+      const handles = document.querySelectorAll(".resize-handle");
+      let isResizing = false;
+      let activeResizePointerId = null;
+      let currentDir = "";
+      let resizeStartX = 0, resizeStartY = 0;
+      let initialW = 0, initialH = 0, initialX = 0, initialY = 0;
+
+      function onResizeStart(e, dir, handleEl) {
+        if (isMaximized || e.isPrimary === false) return;
+        isResizing = true;
+        activeResizePointerId = e.pointerId;
+        currentDir = dir;
+        resizeStartX = e.clientX;
+        resizeStartY = e.clientY;
+
+        const rect = winEl.getBoundingClientRect();
+        initialW = rect.width;
+        initialH = rect.height;
+        initialX = rect.left;
+        initialY = rect.top;
+
+        winEl.style.transition = "none";
+        winEl.style.transform = "none";
+
+        if (handleEl.setPointerCapture) {
+          try {
+            handleEl.setPointerCapture(e.pointerId);
+          } catch (err) {}
+        }
+
+        window.addEventListener("pointermove", handleResizeMove);
+        window.addEventListener("pointerup", stopResize);
+        window.addEventListener("pointercancel", stopResize);
+
+        e.stopPropagation();
+        e.preventDefault();
+      }
+
+      handles.forEach(handle => {
+        handle.addEventListener("pointerdown", (e) => {
+          onResizeStart(e, handle.dataset.dir, handle);
+        });
+      });
+
+      function handleResizeMove(e) {
+        if (!isResizing || isMaximized || e.pointerId !== activeResizePointerId) return;
+
+        const deltaX = e.clientX - resizeStartX;
+        const deltaY = e.clientY - resizeStartY;
+        const minW = window.innerWidth <= 640 ? 300 : 420;
+        const minH = 360;
+
+        if (currentDir.includes("e")) {
+          const newW = Math.max(minW, initialW + deltaX);
+          winEl.style.width = `${newW}px`;
+          normalRect.width = newW;
+        }
+        if (currentDir.includes("s")) {
+          const newH = Math.max(minH, initialH + deltaY);
+          winEl.style.height = `${newH}px`;
+          normalRect.height = newH;
+        }
+        if (currentDir.includes("w")) {
+          const newW = Math.max(minW, initialW - deltaX);
+          if (newW > minW) {
+            winEl.style.width = `${newW}px`;
+            winEl.style.left = `${initialX + deltaX}px`;
+            normalRect.width = newW;
+            normalRect.left = initialX + deltaX;
+          }
+        }
+        if (currentDir.includes("n")) {
+          const newH = Math.max(minH, initialH - deltaY);
+          if (newH > minH) {
+            winEl.style.height = `${newH}px`;
+            winEl.style.top = `${Math.max(0, initialY + deltaY)}px`;
+            normalRect.height = newH;
+            normalRect.top = Math.max(0, initialY + deltaY);
+          }
+        }
+      }
+
+      function stopResize(e) {
+        if (!isResizing) return;
+        if (e && e.pointerId !== activeResizePointerId) return;
+
+        isResizing = false;
+        activeResizePointerId = null;
+        winEl.style.transition = "";
+
+        window.removeEventListener("pointermove", handleResizeMove);
+        window.removeEventListener("pointerup", stopResize);
+        window.removeEventListener("pointercancel", stopResize);
+      }
+
+      window.addEventListener("resize", () => {
+        if (!isMaximized && window.innerWidth <= 768) {
+          const curW = parseInt(winEl.style.width) || normalRect.width;
+          if (curW > window.innerWidth - 16) {
+            winEl.style.width = `${window.innerWidth - 16}px`;
+            winEl.style.left = `8px`;
+          }
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      adaptInitialWindowBounds();
+      initData();
+      updateLoginPromptUI();
+
+      // Initially prepare login screen behind boot screens
+      const loginScreen = document.getElementById("win10LoginScreen");
+      if (loginScreen) {
+        loginScreen.classList.remove("fade-out");
+        loginScreen.style.display = "flex";
+      }
+
+      // Step 1: Pitch Black Windows 10 Boot Screen runs/waits for 2 full seconds (2000ms)
+      showBlackBootScreen(2000, () => {
+        // Step 2: Transitions into Blue "Just a moment..." loader (~1.8s)
+        showBlueMomentLoader("Just a moment...", 1800, () => {
+          // Step 3: Reveals Windows 10 Login Screen
+          const hasPassword = Boolean(clientSettings.password && clientSettings.password.length > 0);
+          const pwdInput = document.getElementById("loginPasswordInput");
+          const noPassBtn = document.getElementById("loginNoPassBtn");
+
+          if (hasPassword && pwdInput) {
+            pwdInput.focus();
+          } else if (noPassBtn) {
+            noPassBtn.focus();
+          }
+        });
+      });
+
+      const pwdInput = document.getElementById("loginPasswordInput");
+      if (pwdInput) {
+        pwdInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            submitWin10Login();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
